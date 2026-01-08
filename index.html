@@ -2,9 +2,9 @@
 <html lang="it">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
     <title>SMEMOPASS - Gestore Password Sicuro</title>
-    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect fill='%23667eea' width='100' height='100' rx='20'/%3E%3Cpath d='M30 45h40M30 45v25c0 5 5 10 10 10h20c5 0 10-5 10-10V45M40 45V35c0-5 5-10 10-10s10 5 10 10v10' stroke='%23fff' stroke-width='6' fill='none' stroke-linecap='round'/%3E%3Ccircle cx='50' cy='60' r='5' fill='%23fff'/%3E%3Crect x='48' y='60' width='4' height='12' rx='2' fill='%23fff'/%3E%3C/svg%3E">
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><defs><linearGradient id='grad' x1='0%' y1='0%' x2='100%' y2='100%'><stop offset='0%' style='stop-color:%23667eea;stop-opacity:1' /><stop offset='100%' style='stop-color:%23764ba2;stop-opacity:1' /></linearGradient></defs><rect width='100' height='100' rx='20' fill='url(%23grad)'/><path d='M50 25 L50 35 M35 45 L65 45 M30 45 L30 75 Q30 80 35 80 L65 80 Q70 80 70 75 L70 45 M40 50 L40 70 M50 50 L50 70 M60 50 L60 70' stroke='white' stroke-width='4' fill='none' stroke-linecap='round'/><circle cx='50' cy='30' r='8' fill='white'/></svg>">
     
     <!-- PWA Meta Tags -->
     <meta name="theme-color" content="#667eea">
@@ -15,7 +15,7 @@
     <meta name="description" content="Gestore password sicuro e offline con crittografia AES-256">
     
     <!-- Apple Touch Icon -->
-    <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'%3E%3Crect fill='%23667eea' width='180' height='180' rx='40'/%3E%3Cpath d='M50 80h80M50 80v45c0 10 10 18 18 18h44c10 0 18-8 18-18V80M70 80V62c0-10 10-18 20-18s20 8 20 18v18' stroke='%23fff' stroke-width='12' fill='none' stroke-linecap='round'/%3E%3Ccircle cx='90' cy='108' r='9' fill='%23fff'/%3E%3Crect x='86' y='108' width='8' height='22' rx='4' fill='%23fff'/%3E%3C/svg%3E">
+    <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'><defs><linearGradient id='grad2' x1='0%' y1='0%' x2='100%' y2='100%'><stop offset='0%' style='stop-color:%23667eea;stop-opacity:1' /><stop offset='100%' style='stop-color:%23764ba2;stop-opacity:1' /></linearGradient></defs><rect width='180' height='180' rx='40' fill='url(%23grad2)'/><path d='M90 45 L90 63 M63 81 L117 81 M54 81 L54 135 Q54 144 63 144 L117 144 Q126 144 126 135 L126 81 M72 90 L72 126 M90 90 L90 126 M108 90 L108 126' stroke='white' stroke-width='7' fill='none' stroke-linecap='round'/><circle cx='90' cy='54' r='14' fill='white'/></svg>">
     
     <!-- Manifest -->
     <link rel="manifest" href="manifest.json">
@@ -29,8 +29,7 @@
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            height: 100vh;
-            overflow: hidden;
+            min-height: 100vh;
             display: flex;
             justify-content: center;
             align-items: center;
@@ -56,10 +55,6 @@
             box-shadow: 0 20px 60px rgba(0,0,0,0.3);
             max-width: 900px;
             width: 100%;
-            height: calc(100vh - 40px);
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
         }
 
         .login-screen {
@@ -145,9 +140,11 @@
         }
 
         .btn-small {
-            padding: 12px 18px;
-            font-size: 15px;
-            font-weight: 600;
+            font-size: 16px;
+            font-weight: 700;
+            padding: 14px 20px;
+            padding: 14px 20px;
+            font-size: 16px;
             width: auto;
             display: inline-block;
             margin: 5px;
@@ -158,7 +155,6 @@
         }
 
         .header {
-            flex-shrink: 0;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             padding: 20px 30px;
             color: white;
@@ -168,7 +164,7 @@
         }
 
         .header h1 {
-            font-size: 1.8rem;
+            font-size: 2rem;
         }
 
         .header-actions {
@@ -177,11 +173,10 @@
         }
 
         .content {
-            flex: 1;
-            overflow-y: auto;
-            overflow-x: hidden;
+            padding: 30px;
+                    overflow-y: auto;
             -webkit-overflow-scrolling: touch;
-            padding: 30px;}
+        }
 
         .toolbar {
             display: flex;
@@ -537,7 +532,6 @@
         }
 
         .tabs {
-            flex-shrink: 0;
             display: flex;
             gap: 10px;
             margin-bottom: 25px;
@@ -741,96 +735,6 @@
             margin-bottom: 15px;
             opacity: 0.3;
         }
-
-        /* Backup Reminder */
-        .backup-reminder {
-            position: fixed;
-            bottom: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: white;
-            padding: 20px 24px;
-            border-radius: 12px;
-            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
-            z-index: 10000;
-            max-width: 90%;
-            width: 400px;
-            display: none;
-            animation: slideUpFade 0.3s ease;
-        }
-
-        @keyframes slideUpFade {
-            from {
-                opacity: 0;
-                transform: translateX(-50%) translateY(20px);
-            }
-            to {
-                opacity: 1;
-                transform: translateX(-50%) translateY(0);
-            }
-        }
-
-        .backup-reminder.show {
-            display: block;
-        }
-
-        .backup-reminder-content {
-            display: flex;
-            align-items: center;
-            gap: 16px;
-        }
-
-        .backup-reminder-icon {
-            font-size: 36px;
-            flex-shrink: 0;
-        }
-
-        .backup-reminder-text h3 {
-            font-size: 16px;
-            margin-bottom: 4px;
-            color: #333;
-        }
-
-        .backup-reminder-text p {
-            font-size: 14px;
-            color: #666;
-        }
-
-        .backup-reminder-actions {
-            display: flex;
-            gap: 8px;
-            margin-top: 16px;
-        }
-
-        .backup-reminder-actions button {
-            flex: 1;
-            padding: 12px;
-            border: none;
-            border-radius: 8px;
-            font-weight: 600;
-            cursor: pointer;
-            font-size: 14px;
-            transition: all 0.2s;
-        }
-
-        .btn-backup-now {
-            background: #667eea;
-            color: white;
-        }
-
-        .btn-backup-now:hover {
-            background: #5568d3;
-        }
-
-        .btn-backup-later {
-            background: #f0f0f0;
-            color: #666;
-        }
-
-        .btn-backup-later:hover {
-            background: #e0e0e0;
-        }
-
     </style>
 </head>
 <body>
@@ -2981,55 +2885,6 @@
         document.getElementById('newCategoryName').addEventListener('keypress', function(e) {
             if (e.key === 'Enter') addCategory();
         });
-
-        // Backup Reminder System
-        let backupReminderTimeout = null;
-
-        function showBackupReminder() {
-            clearTimeout(backupReminderTimeout);
-            const reminder = document.getElementById('backupReminder');
-            reminder.classList.add('show');
-            
-            // Auto-hide after 10 seconds
-            backupReminderTimeout = setTimeout(() => {
-                dismissBackupReminder();
-            }, 10000);
-        }
-
-        function dismissBackupReminder() {
-            const reminder = document.getElementById('backupReminder');
-            reminder.classList.remove('show');
-        }
-
-        function backupNow() {
-            dismissBackupReminder();
-            showExportModal();
-        }
-
-        // Trigger backup reminder after data changes
-        function triggerBackupReminder() {
-            // Show after 1 second delay
-            setTimeout(() => {
-                showBackupReminder();
-            }, 1000);
-        }
-
     </script>
-
-    <!-- Backup Reminder Popup -->
-    <div id="backupReminder" class="backup-reminder">
-        <div class="backup-reminder-content">
-            <div class="backup-reminder-icon">💾</div>
-            <div class="backup-reminder-text">
-                <h3>Hai fatto modifiche</h3>
-                <p>Vuoi fare un backup per non perdere i dati?</p>
-            </div>
-        </div>
-        <div class="backup-reminder-actions">
-            <button class="btn-backup-later" onclick="dismissBackupReminder()">Più tardi</button>
-            <button class="btn-backup-now" onclick="backupNow()">Backup ora</button>
-        </div>
-    </div>
-
 </body>
 </html>
