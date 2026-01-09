@@ -13,6 +13,9 @@
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="description" content="Gestore password sicuro e offline con crittografia AES-256">
     
+    <!-- Disable pull-to-refresh -->
+    <meta name="overscroll-behavior-y" content="none">
+    
     <!-- PWA Manifest -->
     <link rel="manifest" href="./manifest.json">
     
@@ -28,6 +31,10 @@
             box-sizing: border-box;
         }
 
+        html {
+            overscroll-behavior-y: none;
+        }
+
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -36,8 +43,7 @@
             justify-content: center;
             align-items: center;
             padding: 20px;
-            overscroll-behavior-y: contain;
-            overflow-x: hidden;
+            overscroll-behavior-y: none;
         }
 
         /* PWA Fullscreen mode adjustments */
@@ -60,7 +66,6 @@
             max-width: 900px;
             width: 100%;
             overflow: hidden;
-            overscroll-behavior: contain;
         }
 
         .login-screen {
@@ -653,30 +658,9 @@
                 font-size: 16px !important;
             }
 
-            /* Prevent pull-to-refresh on main pages */
-            body {
+            /* Prevent pull-to-refresh - SIMPLE */
+            html, body {
                 overscroll-behavior-y: none !important;
-                position: relative !important;
-            }
-
-            .container {
-                overscroll-behavior: none !important;
-            }
-
-            .main-content {
-                overscroll-behavior: contain !important;
-                -webkit-overflow-scrolling: touch !important;
-            }
-
-            .tab-content {
-                overscroll-behavior: contain !important;
-            }
-
-            #dashboardSection,
-            #passwordSection,
-            #memorySection {
-                overscroll-behavior: contain !important;
-                -webkit-overflow-scrolling: touch !important;
             }
         }
 
@@ -778,8 +762,6 @@
 
         .tab-content {
             display: none;
-            overscroll-behavior: contain;
-            -webkit-overflow-scrolling: touch;
         }
 
         .tab-content.active {
@@ -1890,46 +1872,6 @@
                 
                 observer.observe(modal, { attributes: true });
             });
-
-            // Prevent pull-to-refresh on mobile
-            let lastTouchY = 0;
-            let preventPullToRefresh = false;
-
-            document.addEventListener('touchstart', function(e) {
-                if (e.touches.length !== 1) return;
-                lastTouchY = e.touches[0].clientY;
-
-                // Check if any scrollable element is at top
-                preventPullToRefresh = isAtTop();
-            }, { passive: false });
-
-            document.addEventListener('touchmove', function(e) {
-                if (e.touches.length !== 1) return;
-                
-                const touchY = e.touches[0].clientY;
-                const touchYDelta = touchY - lastTouchY;
-
-                // Prevent if pulling down at the top
-                if (preventPullToRefresh && touchYDelta > 0) {
-                    e.preventDefault();
-                }
-            }, { passive: false });
-
-            function isAtTop() {
-                // Check if window is at top
-                if (window.pageYOffset > 0) return false;
-                
-                // Check if any active scrollable container is at top
-                const scrollContainers = document.querySelectorAll('.main-content, .tab-content, .container');
-                
-                for (let container of scrollContainers) {
-                    if (container.scrollTop > 0) {
-                        return false;
-                    }
-                }
-                
-                return true;
-            }
         });
 
         // Crypto functions
