@@ -1,7 +1,7 @@
 // SMEMOPASS Service Worker
-// Version 4.0.0 - Simplified
+// Version 5.0.0 - PWA Standalone Fix
 
-const CACHE_NAME = 'smemopass-v4';
+const CACHE_NAME = 'smemopass-v5';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',

@@ -46,6 +46,20 @@
             overscroll-behavior-y: none;
         }
 
+        /* Fix for PWA standalone mode */
+        @media all and (display-mode: standalone) {
+            html, body {
+                overscroll-behavior: none;
+                overflow: auto;
+                height: 100%;
+                position: relative;
+            }
+            
+            body {
+                overflow-y: auto;
+            }
+        }
+
         /* PWA Fullscreen mode adjustments */
         @media (display-mode: standalone) {
             body {
@@ -661,6 +675,19 @@
             /* Prevent pull-to-refresh - SIMPLE */
             html, body {
                 overscroll-behavior-y: none !important;
+            }
+
+            /* Additional fix for PWA standalone mode on Android */
+            @media all and (display-mode: standalone) {
+                html {
+                    overflow-y: auto !important;
+                    height: 100% !important;
+                }
+                
+                body {
+                    overflow-y: auto !important;
+                    min-height: 100% !important;
+                }
             }
         }
 
