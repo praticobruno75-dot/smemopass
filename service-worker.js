@@ -1,7 +1,7 @@
 // SMEMOPASS Service Worker
 // Version 1.0.0
 
-const CACHE_NAME = 'smemopass-v1';
+const CACHE_NAME = 'smemopass-v2';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
