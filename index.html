@@ -1,0 +1,3675 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SMEMOPASS - Gestore Password Sicuro</title>
+    
+    <!-- PWA Meta Tags -->
+    <meta name="theme-color" content="#667eea">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="SMEMOPASS">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="description" content="Gestore password sicuro e offline con crittografia AES-256">
+    
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="./manifest.json">
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="./icons/favicon.png">
+    
+    <!-- Apple Touch Icon -->
+    <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            overscroll-behavior-y: contain;
+            overflow-x: hidden;
+        }
+
+        /* PWA Fullscreen mode adjustments */
+        @media (display-mode: standalone) {
+            body {
+                padding-top: env(safe-area-inset-top);
+                padding-bottom: env(safe-area-inset-bottom);
+            }
+            
+            .container {
+                max-height: calc(100vh - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+                overflow-y: auto;
+            }
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            max-width: 900px;
+            width: 100%;
+            overflow: hidden;
+            overscroll-behavior: contain;
+        }
+
+        .login-screen {
+            padding: 60px 40px;
+            text-align: center;
+        }
+
+        .login-screen h1 {
+            color: #667eea;
+            margin-bottom: 10px;
+            font-size: 2.5em;
+        }
+
+        .login-screen p {
+            color: #666;
+            margin-bottom: 40px;
+        }
+
+        .input-group {
+            margin-bottom: 20px;
+            text-align: left;
+        }
+
+        .input-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 500;
+        }
+
+        .input-group input, .input-group select, .input-group textarea {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+
+        .input-group input:focus, .input-group select:focus, .input-group textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .input-group textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 14px 30px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            width: 100%;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            margin-top: 10px;
+        }
+
+        .btn-danger {
+            background: #dc3545;
+        }
+
+        .btn-success {
+            background: #28a745;
+        }
+
+        .btn-small {
+            padding: 8px 16px;
+            font-size: 14px;
+            width: auto;
+            display: inline-block;
+            margin: 5px;
+        }
+
+        .main-app {
+            display: none;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px 30px;
+            color: white;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header h1 {
+            font-size: 1.8em;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .content {
+            padding: 30px;
+        }
+
+        .toolbar {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 25px;
+            flex-wrap: wrap;
+        }
+
+        .search-box {
+            flex: 1;
+            min-width: 200px;
+        }
+
+        .search-box input {
+            width: 100%;
+            padding: 10px 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+
+        .filter-select {
+            padding: 10px 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            cursor: pointer;
+        }
+
+        .password-list {
+            display: grid;
+            gap: 15px;
+        }
+
+        .password-card {
+            background: #f8f9fa;
+            border: 2px solid #e0e0e0;
+            border-radius: 12px;
+            padding: 20px;
+            transition: all 0.3s;
+        }
+
+        .password-card:hover {
+            border-color: #667eea;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        .password-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: start;
+            margin-bottom: 15px;
+        }
+
+        .password-card-title {
+            font-size: 1.3em;
+            color: #333;
+            font-weight: 600;
+        }
+
+        .password-card-category {
+            display: inline-block;
+            padding: 4px 12px;
+            background: #667eea;
+            color: white;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: 500;
+        }
+
+        .password-card-info {
+            margin: 10px 0;
+            color: #666;
+        }
+
+        .password-card-info strong {
+            color: #333;
+            display: inline-block;
+            min-width: 80px;
+        }
+
+        .password-card-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid #e0e0e0;
+        }
+
+        .icon-btn {
+            padding: 8px 12px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+
+        .icon-btn:hover {
+            transform: translateY(-2px);
+        }
+
+        .btn-copy {
+            background: #28a745;
+            color: white;
+        }
+
+        .btn-show {
+            background: #17a2b8;
+            color: white;
+        }
+
+        .btn-edit {
+            background: #ffc107;
+            color: #333;
+        }
+
+        .btn-delete {
+            background: #dc3545;
+            color: white;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.7);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            max-width: 500px;
+            width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        #instructionsModal .modal-content {
+            max-width: 800px;
+        }
+
+        .instructions-content {
+            max-height: 70vh;
+            overflow-y: auto;
+            padding-right: 10px;
+        }
+
+        .modal-header {
+            font-size: 1.5em;
+            margin-bottom: 20px;
+            color: #333;
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #999;
+        }
+
+        .empty-state svg {
+            width: 100px;
+            height: 100px;
+            margin-bottom: 20px;
+            opacity: 0.3;
+        }
+
+        .password-strength {
+            margin-top: 5px;
+            height: 4px;
+            background: #e0e0e0;
+            border-radius: 2px;
+            overflow: hidden;
+        }
+
+        .password-strength-bar {
+            height: 100%;
+            transition: all 0.3s;
+        }
+
+        .strength-weak { background: #dc3545; width: 33%; }
+        .strength-medium { background: #ffc107; width: 66%; }
+        .strength-strong { background: #28a745; width: 100%; }
+
+        .toast {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            background: #333;
+            color: white;
+            padding: 15px 25px;
+            border-radius: 8px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            display: none;
+            z-index: 2000;
+            animation: slideIn 0.3s;
+        }
+
+        .toast.success {
+            background: #28a745;
+        }
+
+        .toast.error {
+            background: #dc3545;
+        }
+
+        .toast.show {
+            display: block;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        @keyframes slideUp {
+            from {
+                transform: translateX(-50%) translateY(100px);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(-50%) translateY(0);
+                opacity: 1;
+            }
+        }
+
+        .password-generator {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .generator-options {
+            display: grid;
+            gap: 10px;
+            margin: 15px 0;
+        }
+
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .checkbox-group input[type="checkbox"] {
+            width: auto;
+        }
+
+        .generated-password {
+            background: white;
+            padding: 12px;
+            border-radius: 6px;
+            font-family: monospace;
+            font-size: 16px;
+            word-break: break-all;
+            margin: 10px 0;
+            border: 2px solid #667eea;
+        }
+
+        @media (max-width: 768px) {
+            .header {
+                flex-direction: column;
+                gap: 15px;
+                padding: 15px 20px;
+            }
+
+            .header h1 {
+                font-size: 1.5em;
+            }
+
+            .header-actions {
+                width: 100%;
+                flex-wrap: wrap;
+                justify-content: center;
+            }
+
+            .header-actions .btn {
+                font-size: 12px;
+                padding: 8px 12px;
+            }
+
+            .toolbar {
+                flex-direction: column;
+            }
+
+            .password-card-actions {
+                flex-wrap: wrap;
+            }
+
+            .stats-card {
+                min-width: 100px;
+                padding: 15px 10px;
+                flex-direction: column;
+                text-align: center;
+                gap: 8px;
+            }
+
+            .stats-icon {
+                font-size: 2em;
+            }
+
+            .stats-number {
+                font-size: 1.8em;
+            }
+
+            .stats-label {
+                font-size: 0.75em;
+                line-height: 1.2;
+            }
+
+            .dashboard-grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 10px;
+                margin-bottom: 20px;
+            }
+
+            .dashboard-section {
+                padding: 15px;
+            }
+
+            .dashboard-title {
+                font-size: 1.2em;
+                margin-bottom: 15px;
+            }
+
+            .issue-item {
+                padding: 12px;
+            }
+
+            .tabs {
+                display: flex;
+                justify-content: space-around;
+                gap: 2px;
+                margin-bottom: 20px;
+            }
+
+            .tab-btn {
+                font-size: 10px;
+                padding: 8px 4px;
+                flex: 1;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                gap: 4px;
+                min-width: 0;
+            }
+
+            .tab-btn::before {
+                content: attr(data-icon);
+                font-size: 20px;
+                display: block;
+            }
+
+            /* Modal improvements for mobile - APPLIES TO ALL MODALS */
+            .modal {
+                padding: 0 !important;
+                overscroll-behavior: contain !important;
+            }
+
+            .modal-content {
+                max-width: 100% !important;
+                width: 100% !important;
+                height: 100vh !important;
+                max-height: 100vh !important;
+                margin: 0 !important;
+                padding: 30px 15px 100px 15px !important;
+                border-radius: 0 !important;
+                overflow-y: auto !important;
+                position: relative !important;
+                overscroll-behavior: contain !important;
+                -webkit-overflow-scrolling: touch !important;
+            }
+
+            #instructionsModal .modal-content {
+                padding-top: 30px !important;
+            }
+
+            .modal-header {
+                font-size: 1.3em !important;
+                margin-bottom: 15px !important;
+                margin-top: 0 !important;
+                padding-top: 0 !important;
+            }
+
+            .instructions-content {
+                padding-right: 5px !important;
+                max-height: none !important;
+                overflow-y: visible !important;
+                margin-bottom: 20px !important;
+            }
+
+            .modal-actions {
+                position: fixed !important;
+                bottom: 0 !important;
+                left: 0 !important;
+                right: 0 !important;
+                background: white !important;
+                padding: 15px !important;
+                margin: 0 !important;
+                border-top: 2px solid #e0e0e0 !important;
+                text-align: center !important;
+                z-index: 10000 !important;
+                display: flex !important;
+                gap: 10px !important;
+                justify-content: center !important;
+                box-shadow: 0 -2px 10px rgba(0,0,0,0.1) !important;
+            }
+
+            .modal-actions .btn {
+                flex: 1 !important;
+                max-width: 48% !important;
+                padding: 15px !important;
+                font-size: 1em !important;
+            }
+
+            /* For modals with single button */
+            .modal-actions .btn:only-child {
+                max-width: 100% !important;
+            }
+
+            #instructionsModal h3 {
+                font-size: 1.1em !important;
+            }
+
+            #instructionsModal p,
+            #instructionsModal li,
+            #instructionsModal div {
+                font-size: 0.95em !important;
+            }
+
+            /* Prevent pull-to-refresh on modal */
+            body.modal-open {
+                overflow: hidden !important;
+                position: fixed !important;
+                width: 100% !important;
+                height: 100% !important;
+            }
+
+            /* Input fields in modals */
+            .modal-content .input-group {
+                margin-bottom: 15px !important;
+            }
+
+            .modal-content input,
+            .modal-content select,
+            .modal-content textarea {
+                font-size: 16px !important;
+            }
+
+            /* Prevent pull-to-refresh on main pages */
+            body {
+                overscroll-behavior-y: none !important;
+                position: relative !important;
+            }
+
+            .container {
+                overscroll-behavior: none !important;
+            }
+
+            .main-content {
+                overscroll-behavior: contain !important;
+                -webkit-overflow-scrolling: touch !important;
+            }
+
+            .tab-content {
+                overscroll-behavior: contain !important;
+            }
+
+            #dashboardSection,
+            #passwordSection,
+            #memorySection {
+                overscroll-behavior: contain !important;
+                -webkit-overflow-scrolling: touch !important;
+            }
+        }
+
+        .file-input-label {
+            display: inline-block;
+            padding: 14px 30px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            text-align: center;
+            transition: transform 0.2s;
+        }
+
+        .file-input-label:hover {
+            transform: translateY(-2px);
+        }
+
+        input[type="file"] {
+            display: none;
+        }
+
+        .category-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px;
+            background: #f8f9fa;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            margin-bottom: 8px;
+        }
+
+        .category-item.default {
+            background: #e7f3ff;
+            border-color: #667eea;
+        }
+
+        .category-item-name {
+            font-weight: 500;
+            color: #333;
+        }
+
+        .category-item-badge {
+            background: #667eea;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.85em;
+            margin-left: 10px;
+        }
+
+        .btn-delete-category {
+            background: #dc3545;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+        }
+
+        .btn-delete-category:hover {
+            background: #c82333;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 25px;
+            border-bottom: 2px solid #e0e0e0;
+            padding-bottom: 0;
+        }
+
+        .tab-btn {
+            padding: 12px 24px;
+            background: none;
+            border: none;
+            border-bottom: 3px solid transparent;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            color: #666;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .tab-btn:hover {
+            color: #667eea;
+        }
+
+        .tab-btn.active {
+            color: #667eea;
+            border-bottom-color: #667eea;
+        }
+
+        .tab-content {
+            display: none;
+            overscroll-behavior: contain;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stats-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 15px;
+            padding: 25px;
+            color: white;
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+            transition: transform 0.3s;
+        }
+
+        .stats-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .stats-icon {
+            font-size: 3em;
+            opacity: 0.9;
+        }
+
+        .stats-content {
+            flex: 1;
+        }
+
+        .stats-number {
+            font-size: 2.5em;
+            font-weight: bold;
+            line-height: 1;
+        }
+
+        .stats-label {
+            font-size: 0.9em;
+            opacity: 0.9;
+            margin-top: 5px;
+        }
+
+        .dashboard-section {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 20px;
+            border: 2px solid #e0e0e0;
+        }
+
+        .dashboard-title {
+            font-size: 1.5em;
+            color: #333;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #e0e0e0;
+        }
+
+        .issue-list {
+            display: grid;
+            gap: 15px;
+        }
+
+        .issue-item {
+            background: #fff5f5;
+            border-left: 4px solid #dc3545;
+            padding: 15px;
+            border-radius: 8px;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .issue-item.warning {
+            background: #fffbf0;
+            border-left-color: #ffc107;
+        }
+
+        .issue-item.info {
+            background: #f0f8ff;
+            border-left-color: #17a2b8;
+        }
+
+        .issue-content {
+            flex: 1;
+        }
+
+        .issue-title {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 5px;
+        }
+
+        .issue-description {
+            color: #666;
+            font-size: 0.9em;
+        }
+
+        .issue-action {
+            padding: 8px 16px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .issue-action:hover {
+            background: #5568d3;
+        }
+
+        .category-chart {
+            display: grid;
+            gap: 15px;
+        }
+
+        .category-bar-container {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .category-bar-label {
+            min-width: 150px;
+            font-weight: 500;
+            color: #333;
+        }
+
+        .category-bar-wrapper {
+            flex: 1;
+            background: #f0f0f0;
+            border-radius: 8px;
+            height: 30px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .category-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            border-radius: 8px;
+            transition: width 0.5s ease;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            padding-right: 10px;
+            color: white;
+            font-weight: 600;
+            font-size: 0.85em;
+        }
+
+        .empty-dashboard {
+            text-align: center;
+            padding: 40px;
+            color: #999;
+        }
+
+        .empty-dashboard svg {
+            width: 80px;
+            height: 80px;
+            margin-bottom: 15px;
+            opacity: 0.3;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Login Screen -->
+        <div class="login-screen" id="loginScreen">
+            <h1>🔐 SMEMOPASS</h1>
+            <p>Inserisci la tua password master per accedere</p>
+            
+            <div class="input-group">
+                <label for="masterPassword">Password Master</label>
+                <input type="password" id="masterPassword" placeholder="Inserisci la password master" autocomplete="off">
+            </div>
+            
+            <button class="btn" onclick="login()">Accedi</button>
+            <button class="btn btn-secondary" onclick="showFirstTimeSetup()">Prima configurazione</button>
+        </div>
+
+        <!-- First Time Setup Screen -->
+        <div class="login-screen" id="setupScreen" style="display: none;">
+            <h1>🔐 SMEMOPASS</h1>
+            <p>Crea una password master per proteggere le tue password</p>
+            
+            <div class="input-group">
+                <label for="setupPassword">Password Master (minimo 8 caratteri)</label>
+                <input type="password" id="setupPassword" placeholder="Crea una password master" autocomplete="off">
+            </div>
+            
+            <div class="input-group">
+                <label for="setupPasswordConfirm">Conferma Password Master</label>
+                <input type="password" id="setupPasswordConfirm" placeholder="Conferma la password" autocomplete="off">
+            </div>
+
+            <div class="input-group">
+                <label for="setupSecurityQuestion">🔐 Domanda di Sicurezza (opzionale)</label>
+                <input type="text" id="setupSecurityQuestion" placeholder="Es: Nome del mio primo animale?" autocomplete="off">
+                <small style="color: #666; margin-top: 5px; display: block;">
+                    Questa domanda ti aiuterà a ricordare quale password hai usato quando importi un backup
+                </small>
+            </div>
+            
+            <button class="btn" onclick="completeSetup()">Crea</button>
+            <button class="btn btn-secondary" onclick="backToLogin()">Annulla</button>
+        </div>
+
+        <!-- Main App -->
+        <div class="main-app" id="mainApp">
+            <div class="header">
+                <h1>🔐 SMEMOPASS</h1>
+                <div class="header-actions">
+                    <button class="btn btn-small" onclick="showInstructions()">📖 Istruzioni</button>
+                    <button class="btn btn-small" onclick="showSettings()">⚙️ Impostazioni</button>
+                    <button class="btn btn-small" onclick="showExportModal()">💾 Backup</button>
+                    <button class="btn btn-small" onclick="showImportModal()">📥 Import</button>
+                    <button class="btn btn-small btn-danger" onclick="logout()">Esci</button>
+                </div>
+            </div>
+
+            <div class="content">
+                <!-- Tabs -->
+                <div class="tabs">
+                    <button class="tab-btn active" data-icon="📊" onclick="switchTab('dashboard')"><span class="tab-text">Dashboard</span></button>
+                    <button class="tab-btn" data-icon="🔐" onclick="switchTab('passwords')"><span class="tab-text">Password</span></button>
+                    <button class="tab-btn" data-icon="💾" onclick="switchTab('memory')"><span class="tab-text">Memoria</span></button>
+                </div>
+
+                <!-- Dashboard Section -->
+                <div id="dashboardSection" class="tab-content active">
+                    <div class="dashboard-grid">
+                        <!-- Statistics Cards -->
+                        <div class="stats-card">
+                            <div class="stats-icon">🔐</div>
+                            <div class="stats-content">
+                                <div class="stats-number" id="totalPasswords">0</div>
+                                <div class="stats-label">Password Totali</div>
+                            </div>
+                        </div>
+
+                        <div class="stats-card">
+                            <div class="stats-icon">💾</div>
+                            <div class="stats-content">
+                                <div class="stats-number" id="totalMemory">0</div>
+                                <div class="stats-label">Informazioni</div>
+                            </div>
+                        </div>
+
+                        <div class="stats-card">
+                            <div class="stats-icon">⚠️</div>
+                            <div class="stats-content">
+                                <div class="stats-number" id="weakPasswords">0</div>
+                                <div class="stats-label">Password Deboli</div>
+                            </div>
+                        </div>
+
+                        <div class="stats-card">
+                            <div class="stats-icon">🔄</div>
+                            <div class="stats-content">
+                                <div class="stats-number" id="duplicatePasswords">0</div>
+                                <div class="stats-label">Password Duplicate</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Security Issues -->
+                    <div class="dashboard-section">
+                        <h2 class="dashboard-title">🛡️ Problemi di Sicurezza</h2>
+                        <div id="securityIssues" class="issue-list">
+                            <!-- Issues will be populated here -->
+                        </div>
+                    </div>
+
+                    <!-- Old Passwords -->
+                    <div class="dashboard-section">
+                        <h2 class="dashboard-title">⏰ Password Vecchie (6+ mesi)</h2>
+                        <div id="oldPasswords" class="issue-list">
+                            <!-- Old passwords will be populated here -->
+                        </div>
+                    </div>
+
+                    <!-- Category Distribution -->
+                    <div class="dashboard-section">
+                        <h2 class="dashboard-title">📊 Distribuzione per Categoria</h2>
+                        <div id="categoryChart" class="category-chart">
+                            <!-- Category bars will be populated here -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Password Section -->
+                <div id="passwordSection" class="tab-content active">
+                    <div class="toolbar">
+                        <div class="search-box">
+                            <input type="text" id="searchInput" placeholder="🔍 Cerca password..." oninput="filterPasswords()">
+                        </div>
+                        <select class="filter-select" id="categoryFilter" onchange="filterPasswords()">
+                            <option value="">Tutte le categorie</option>
+                        </select>
+                        <button class="btn btn-small" onclick="showCategoryManager('password')">📁 Categorie</button>
+                        <button class="btn btn-small btn-success" onclick="showAddModal()">+ Aggiungi</button>
+                    </div>
+
+                    <div class="password-list" id="passwordList">
+                        <!-- Password cards will be inserted here -->
+                    </div>
+                </div>
+
+                <!-- Memory Section -->
+                <div id="memorySection" class="tab-content">
+                    <div class="toolbar">
+                        <div class="search-box">
+                            <input type="text" id="searchMemoryInput" placeholder="🔍 Cerca informazioni..." oninput="filterMemory()">
+                        </div>
+                        <select class="filter-select" id="memoryCategoryFilter" onchange="filterMemory()">
+                            <option value="">Tutte le categorie</option>
+                        </select>
+                        <button class="btn btn-small" onclick="showCategoryManager('memory')">📁 Categorie</button>
+                        <button class="btn btn-small btn-success" onclick="showAddMemoryModal()">+ Aggiungi</button>
+                    </div>
+
+                    <div class="password-list" id="memoryList">
+                        <!-- Memory cards will be inserted here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add/Edit Modal -->
+    <div class="modal" id="addEditModal">
+        <div class="modal-content">
+            <h2 class="modal-header" id="modalTitle">Aggiungi Password</h2>
+            
+            <div class="input-group">
+                <label for="entryTitle">Titolo *</label>
+                <input type="text" id="entryTitle" placeholder="es. Facebook, Gmail, ecc.">
+            </div>
+
+            <div class="input-group">
+                <label for="entryCategory">Categoria *</label>
+                <select id="entryCategory">
+                </select>
+            </div>
+
+            <div class="input-group">
+                <label for="entryUsername">Username / Email</label>
+                <input type="text" id="entryUsername" placeholder="username o email">
+            </div>
+
+            <div class="input-group">
+                <label for="entryEmail">Email aggiuntiva</label>
+                <input type="email" id="entryEmail" placeholder="email@esempio.com">
+            </div>
+
+            <div class="password-generator">
+                <strong>Generatore Password</strong>
+                <div class="generator-options">
+                    <div class="input-group">
+                        <label>Lunghezza: <span id="lengthValue">16</span></label>
+                        <input type="range" id="genLength" min="8" max="32" value="16" oninput="document.getElementById('lengthValue').textContent = this.value">
+                    </div>
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="genUppercase" checked>
+                        <label for="genUppercase">Maiuscole (A-Z)</label>
+                    </div>
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="genLowercase" checked>
+                        <label for="genLowercase">Minuscole (a-z)</label>
+                    </div>
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="genNumbers" checked>
+                        <label for="genNumbers">Numeri (0-9)</label>
+                    </div>
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="genSymbols" checked>
+                        <label for="genSymbols">Simboli (!@#$%^&*)</label>
+                    </div>
+                </div>
+                <button class="btn btn-small" onclick="generateAndFillPassword()">Genera Password</button>
+                <div class="generated-password" id="generatedPasswordDisplay" style="display:none;"></div>
+            </div>
+
+            <div class="input-group">
+                <label for="entryPassword">Password *</label>
+                <input type="password" id="entryPassword" placeholder="password" oninput="checkPasswordStrength()">
+                <div class="password-strength">
+                    <div class="password-strength-bar" id="strengthBar"></div>
+                </div>
+            </div>
+
+            <div class="input-group">
+                <label for="entryUrl">URL / Sito Web</label>
+                <input type="url" id="entryUrl" placeholder="https://esempio.com">
+            </div>
+
+            <div class="input-group">
+                <label for="entryNotes">Note</label>
+                <textarea id="entryNotes" placeholder="Note aggiuntive..."></textarea>
+            </div>
+
+            <div class="modal-actions">
+                <button class="btn btn-success" onclick="saveEntry()">Salva</button>
+                <button class="btn btn-secondary" onclick="closeModal()">Annulla</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Export Modal -->
+    <div class="modal" id="exportModal">
+        <div class="modal-content">
+            <h2 class="modal-header">Esporta Password</h2>
+            <p>Scarica un backup crittografato delle tue password. Il file è protetto dalla tua password master.</p>
+            <div class="modal-actions">
+                <button class="btn btn-success" onclick="exportData()">Scarica Backup</button>
+                <button class="btn btn-secondary" onclick="closeExportModal()">Annulla</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Import Modal -->
+    <div class="modal" id="importModal">
+        <div class="modal-content">
+            <h2 class="modal-header">📥 Importa Backup</h2>
+            <p style="margin-bottom: 15px;">Carica un file di backup precedentemente esportato.</p>
+            <div style="background: #fff3cd; border: 2px solid #ffc107; border-radius: 8px; padding: 15px; margin-bottom: 20px;">
+                <strong>⚠️ IMPORTANTE:</strong>
+                <ul style="margin: 10px 0 0 20px; line-height: 1.6;">
+                    <li>Sostituirà tutti i dati attuali</li>
+                    <li>Dovrai usare la <strong>password master del backup</strong></li>
+                    <li>La tua password master attuale verrà sostituita</li>
+                </ul>
+            </div>
+            <div class="input-group">
+                <label for="importFile" class="file-input-label" id="importFileLabel">📁 Scegli file di backup</label>
+                <input type="file" id="importFile" accept=".json" onchange="updateImportFileName()">
+                <div id="importFileName" style="margin-top: 10px; color: #667eea; font-weight: 500; display: none;">
+                    <span id="importFileNameText"></span>
+                </div>
+                <div id="importPasswordHint" style="display: none; background: #e7f3ff; border: 2px solid #667eea; border-radius: 8px; padding: 15px; margin-top: 15px;">
+                    <strong>💡 Promemoria Password:</strong>
+                    <div id="importPasswordHintText" style="margin-top: 8px; font-size: 1.1em; color: #333;"></div>
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-success" id="importButton" onclick="importData()" disabled style="opacity: 0.5;">Importa</button>
+                <button class="btn btn-secondary" onclick="closeImportModal()">Annulla</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Category Manager Modal -->
+    <div class="modal" id="categoryModal">
+        <div class="modal-content">
+            <h2 class="modal-header" id="categoryModalTitle">Gestione Categorie</h2>
+            
+            <div class="input-group">
+                <label for="newCategoryName">Nuova Categoria</label>
+                <div style="display: flex; gap: 10px;">
+                    <input type="text" id="newCategoryName" placeholder="Nome categoria" style="flex: 1;">
+                    <button class="btn btn-small btn-success" onclick="addCategory()">Aggiungi</button>
+                </div>
+            </div>
+
+            <div style="margin: 20px 0;">
+                <strong>Categorie Esistenti:</strong>
+                <div id="categoryList" style="margin-top: 10px; max-height: 300px; overflow-y: auto;">
+                    <!-- Categories will be listed here -->
+                </div>
+            </div>
+
+            <div class="modal-actions">
+                <button class="btn btn-secondary" onclick="closeCategoryModal()">Chiudi</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add/Edit Memory Modal -->
+    <div class="modal" id="addEditMemoryModal">
+        <div class="modal-content">
+            <h2 class="modal-header" id="memoryModalTitle">Aggiungi Informazione</h2>
+            
+            <div class="input-group">
+                <label for="memoryTitle">Titolo *</label>
+                <input type="text" id="memoryTitle" placeholder="es. IBAN principale, Codice Fiscale, ecc.">
+            </div>
+
+            <div class="input-group">
+                <label for="memoryCategory">Categoria *</label>
+                <select id="memoryCategory">
+                </select>
+            </div>
+
+            <div class="input-group">
+                <label for="memoryData">Informazione *</label>
+                <input type="text" id="memoryData" placeholder="Inserisci il dato da salvare">
+            </div>
+
+            <div class="input-group">
+                <label for="memoryAdditionalInfo">Informazioni aggiuntive</label>
+                <input type="text" id="memoryAdditionalInfo" placeholder="es. Banca, ente emittente, ecc.">
+            </div>
+
+            <div class="input-group">
+                <label for="memoryNotes">Note</label>
+                <textarea id="memoryNotes" placeholder="Note aggiuntive..."></textarea>
+            </div>
+
+            <div class="modal-actions">
+                <button class="btn btn-success" onclick="saveMemoryEntry()">Salva</button>
+                <button class="btn btn-secondary" onclick="closeMemoryModal()">Annulla</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div class="modal" id="settingsModal">
+        <div class="modal-content">
+            <h2 class="modal-header">⚙️ Impostazioni</h2>
+            
+            <div class="input-group">
+                <label for="inactivityTimeout">Timeout Inattività (minuti)</label>
+                <select id="inactivityTimeout" onchange="saveSettings()">
+                    <option value="1">1 minuto</option>
+                    <option value="2">2 minuti</option>
+                    <option value="5">5 minuti</option>
+                    <option value="10">10 minuti</option>
+                    <option value="15">15 minuti</option>
+                    <option value="30">30 minuti</option>
+                    <option value="0">Mai (non consigliato)</option>
+                </select>
+                <small style="color: #666; margin-top: 5px; display: block;">Tempo di inattività prima del blocco automatico</small>
+            </div>
+
+            <div class="input-group">
+                <label for="autoHideDelay">Durata Visualizzazione Dati (secondi)</label>
+                <select id="autoHideDelay" onchange="saveSettings()">
+                    <option value="5">5 secondi</option>
+                    <option value="10">10 secondi</option>
+                    <option value="15">15 secondi</option>
+                    <option value="30">30 secondi</option>
+                    <option value="0">Mai (rimane visibile)</option>
+                </select>
+                <small style="color: #666; margin-top: 5px; display: block;">Tempo dopo il quale i dati sensibili vengono nascosti automaticamente</small>
+            </div>
+
+            <div class="input-group">
+                <label for="clipboardClearDelay">Cancellazione Automatica Appunti (secondi)</label>
+                <select id="clipboardClearDelay" onchange="saveSettings()">
+                    <option value="15">15 secondi</option>
+                    <option value="30">30 secondi</option>
+                    <option value="60">60 secondi</option>
+                    <option value="120">2 minuti</option>
+                    <option value="0">Mai (non cancellare)</option>
+                </select>
+                <small style="color: #666; margin-top: 5px; display: block;">Tempo dopo il quale gli appunti vengono cancellati automaticamente</small>
+            </div>
+
+            <div class="input-group">
+                <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
+                    <input type="checkbox" id="showPasswordStrength" onchange="saveSettings()" style="width: auto;">
+                    <span>Mostra indicatore forza password</span>
+                </label>
+            </div>
+
+            <div class="input-group">
+                <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
+                    <input type="checkbox" id="confirmDelete" onchange="saveSettings()" style="width: auto;">
+                    <span>Conferma prima di eliminare</span>
+                </label>
+            </div>
+
+            <div class="input-group">
+                <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
+                    <input type="checkbox" id="backupReminder" onchange="saveSettings()" style="width: auto;">
+                    <span>Promemoria backup dopo modifiche</span>
+                </label>
+            </div>
+
+            <div class="input-group" id="backupThresholdGroup">
+                <label for="backupReminderThreshold">Numero modifiche prima del promemoria</label>
+                <select id="backupReminderThreshold" onchange="saveSettings()">
+                    <option value="1">1 modifica</option>
+                    <option value="2">2 modifiche</option>
+                    <option value="3">3 modifiche</option>
+                    <option value="5">5 modifiche</option>
+                    <option value="10">10 modifiche</option>
+                    <option value="15">15 modifiche</option>
+                    <option value="20">20 modifiche</option>
+                </select>
+                <small style="color: #666; margin-top: 5px; display: block;">Dopo quante modifiche vuoi essere avvisato di fare un backup</small>
+            </div>
+
+            <div style="margin-top: 30px; padding-top: 20px; border-top: 2px solid #e0e0e0;">
+                <h3 style="margin-bottom: 15px; color: #dc3545;">⚠️ Zona Pericolosa</h3>
+                <button class="btn btn-danger" onclick="changePassword()" style="margin-bottom: 10px;">🔑 Cambia Password Master</button>
+                <button class="btn btn-danger" onclick="deleteAllData()" style="margin-bottom: 10px;">🗑️ Elimina Tutti i Dati</button>
+                <button class="btn btn-danger" onclick="resetApp()">💥 Reset Completo App</button>
+                <small style="display: block; margin-top: 10px; color: #666;">
+                    <strong>Elimina Tutti i Dati:</strong> Cancella password e informazioni, mantiene password master<br>
+                    <strong>Reset Completo:</strong> Elimina TUTTO inclusa la password master (come prima installazione)
+                </small>
+            </div>
+
+            <div class="modal-actions">
+                <button class="btn btn-secondary" onclick="closeSettings()">Chiudi</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Backup Reminder Modal -->
+    <div class="modal" id="backupReminderModal">
+        <div class="modal-content">
+            <h2 class="modal-header">💾 Promemoria Backup</h2>
+            <p style="margin-bottom: 20px;">Hai effettuato delle modifiche ai tuoi dati. Vuoi fare un backup adesso?</p>
+            <p style="color: #666; font-size: 0.9em; margin-bottom: 20px;">
+                ⚠️ <strong>Importante:</strong> Se perdi questo dispositivo o cancelli il browser, perderai tutti i dati senza backup!
+            </p>
+            <div class="modal-actions">
+                <button class="btn btn-success" onclick="backupNow()">💾 Sì, Backup Ora</button>
+                <button class="btn btn-secondary" onclick="remindLater()">⏰ Ricordamelo Dopo</button>
+                <button class="btn btn-secondary" onclick="dontRemind()">❌ Non Ricordarmelo</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Change Password Modal -->
+    <div class="modal" id="changePasswordModal">
+        <div class="modal-content">
+            <h2 class="modal-header">🔑 Cambia Password Master</h2>
+            
+            <div class="input-group">
+                <label for="currentPasswordInput">Password Master Attuale *</label>
+                <input type="password" id="currentPasswordInput" placeholder="Inserisci la password attuale" autocomplete="off">
+            </div>
+
+            <div class="input-group">
+                <label for="newPasswordInput">Nuova Password Master * (minimo 8 caratteri)</label>
+                <input type="password" id="newPasswordInput" placeholder="Inserisci la nuova password" autocomplete="off">
+            </div>
+
+            <div class="input-group">
+                <label for="confirmNewPasswordInput">Conferma Nuova Password *</label>
+                <input type="password" id="confirmNewPasswordInput" placeholder="Conferma la nuova password" autocomplete="off">
+            </div>
+
+            <div class="input-group">
+                <label for="newSecurityQuestion">🔐 Domanda di Sicurezza (opzionale)</label>
+                <input type="text" id="newSecurityQuestion" placeholder="Es: Nome del mio primo animale?" autocomplete="off">
+                <small style="color: #666; margin-top: 5px; display: block;">
+                    Aggiorna o aggiungi una domanda per ricordare questa password quando importi backup futuri
+                </small>
+            </div>
+
+            <div class="modal-actions">
+                <button class="btn btn-success" onclick="confirmChangePassword()">Cambia Password</button>
+                <button class="btn btn-secondary" onclick="closeChangePasswordModal()">Annulla</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Instructions Modal -->
+    <div class="modal" id="instructionsModal">
+        <div class="modal-content">
+            <h2 class="modal-header">📖 Istruzioni SMEMOPASS</h2>
+            
+            <div class="instructions-content">
+                
+                <!-- Password Master Section -->
+                <div style="margin-bottom: 25px; padding: 20px; background: #fff3cd; border: 3px solid #ffc107; border-radius: 10px;">
+                    <h3 style="margin: 0 0 15px 0; color: #d97706;">🔐 LA PASSWORD MASTER - FONDAMENTALE</h3>
+                    
+                    <p style="margin-bottom: 12px;"><strong>Cos'è la Password Master?</strong><br>
+                    La password master è l'UNICA chiave che protegge tutti i tuoi dati. È come la chiave principale di una cassaforte: senza di essa, nessuno (nemmeno tu!) può accedere alle password salvate.</p>
+                    
+                    <div style="background: #fee2e2; padding: 15px; border-radius: 8px; border-left: 4px solid #dc2626; margin: 15px 0;">
+                        <strong style="color: #dc2626;">⚠️ ATTENZIONE - MOLTO IMPORTANTE:</strong>
+                        <ul style="margin: 10px 0 0 20px; line-height: 1.8;">
+                            <li><strong>Se dimentichi la password master, perdi TUTTO</strong> - Non esiste un modo per recuperarla</li>
+                            <li><strong>Non può essere resettata</strong> - Non ci sono domande di recupero o email di reset</li>
+                            <li><strong>Sceglila con cura</strong> - Deve essere memorabile per te ma difficile da indovinare</li>
+                            <li><strong>Non condividerla mai</strong> - È personale e segreta</li>
+                            <li><strong>Scrivila in un posto sicuro</strong> - Almeno finché non la memorizzi perfettamente</li>
+                        </ul>
+                    </div>
+                    
+                    <p style="margin: 15px 0;"><strong>💡 La Domanda di Sicurezza:</strong><br>
+                    Quando crei la password master, puoi aggiungere una "domanda di sicurezza" opzionale.</p>
+                    <ul style="margin: 10px 0 15px 20px; line-height: 1.6;">
+                        <li>NON serve per recuperare la password (è impossibile)</li>
+                        <li>Serve solo come PROMEMORIA quando importi un backup</li>
+                        <li>Ti aiuta a ricordare QUALE password hai usato per QUEL backup</li>
+                        <li>Esempio: Se usi password diverse nel tempo, la domanda ti ricorda quale stai cercando</li>
+                    </ul>
+                    
+                    <div style="background: #e0f2fe; padding: 12px; border-radius: 6px; margin-top: 15px;">
+                        <strong>Esempio pratico:</strong><br>
+                        • Oggi: Password "Gatto2024!" + Domanda "Nome primo animale?"<br>
+                        • Domani cambi in: Password "Cane2025!" + Domanda "Nome secondo animale?"<br>
+                        • Quando importi un vecchio backup e vedi "Nome primo animale?" → ricordi che serve "Gatto2024!"
+                    </div>
+                </div>
+                        3. Usa il <strong>Generatore Password</strong> per creare password sicure<br>
+                        4. L'indicatore di forza ti aiuta a valutare la sicurezza<br>
+                        5. Clicca "Salva"
+                    </div>
+
+                <!-- Primi Passi -->
+                <div style="margin-bottom: 20px;">
+                    <h3 style="color: #667eea; margin-bottom: 10px;">🚀 Primo Utilizzo</h3>
+                    <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 10px;">
+                        <strong>1. Prima Configurazione</strong><br>
+                        • Clicca "Prima configurazione"<br>
+                        • Crea una password master (minimo 8 caratteri, meglio se più lunga)<br>
+                        • Conferma la password<br>
+                        • (Opzionale) Aggiungi una domanda di sicurezza come promemoria<br>
+                        • Clicca "Crea"
+                    </div>
+                    <div style="background: #f8f9fa; padding: 15px; border-radius: 8px;">
+                        <strong>2. Accesso</strong><br>
+                        Inserisci la password master e clicca "Accedi". L'app si blocca automaticamente dopo il tempo di inattività impostato.
+                    </div>
+                </div>
+
+                <!-- Dashboard -->
+                <div style="margin-bottom: 20px;">
+                    <h3 style="color: #667eea; margin-bottom: 10px;">📊 Dashboard Sicurezza</h3>
+                    <p>Mostra in tempo reale:</p>
+                    <ul style="margin: 10px 0; padding-left: 20px; color: #666; line-height: 1.8;">
+                        <li><strong>Password Deboli:</strong> password troppo semplici da aggiornare</li>
+                        <li><strong>Password Duplicate:</strong> stessa password usata per più account</li>
+                        <li><strong>Password Vecchie:</strong> non aggiornate da 6+ mesi</li>
+                        <li><strong>Distribuzione Categorie:</strong> grafico delle tue password</li>
+                    </ul>
+                    <p style="margin-top: 10px; color: #666;">Clicca "Aggiorna" per modificare direttamente le password problematiche.</p>
+                </div>
+
+                <!-- Gestione Password -->
+                <div style="margin-bottom: 20px;">
+                    <h3 style="color: #667eea; margin-bottom: 10px;">🔐 Gestione Password</h3>
+                    <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 10px;">
+                        <strong>Aggiungere:</strong> + Aggiungi → Compila campi → Usa generatore → Salva<br>
+                        <strong>Copiare:</strong> 📋 Copia (si cancella automaticamente dagli appunti)<br>
+                        <strong>Visualizzare:</strong> 👁️ Mostra (si nasconde automaticamente)<br>
+                        <strong>Modificare:</strong> ✏️ Modifica → Aggiorna → Salva<br>
+                        <strong>Eliminare:</strong> 🗑️ Elimina (con conferma)
+                    </div>
+                </div>
+
+                <!-- Memoria Digitale -->
+                <div style="margin-bottom: 20px;">
+                    <h3 style="color: #667eea; margin-bottom: 10px;">💾 Memoria Digitale</h3>
+                    <p>Per salvare informazioni importanti che non sono password: codici fiscali, IBAN, numeri di patente, partita IVA, ecc. Funziona esattamente come le password.</p>
+                </div>
+
+                <!-- BACKUP - SEZIONE CRITICA -->
+                <div style="margin-bottom: 20px; padding: 20px; background: #fee2e2; border: 3px solid #dc2626; border-radius: 10px;">
+                    <h3 style="margin: 0 0 15px 0; color: #dc2626;">💾 BACKUP - FONDAMENTALE</h3>
+                    
+                    <div style="background: white; padding: 15px; border-radius: 8px; margin-bottom: 15px;">
+                        <strong>⚠️ PERCHÉ È CRITICO:</strong><br>
+                        • SMEMOPASS salva tutto SOLO sul tuo dispositivo<br>
+                        • Se perdi il dispositivo/browser → perdi TUTTO<br>
+                        • Il backup è l'UNICO modo per recuperare i dati
+                    </div>
+                    
+                    <div style="background: white; padding: 15px; border-radius: 8px; margin-bottom: 15px;">
+                        <strong>Come fare Backup:</strong><br>
+                        1. Clicca "💾 Backup"<br>
+                        2. Salva il file in posto SICURO<br>
+                        3. Il backup è crittografato con la tua password master
+                    </div>
+                    
+                    <div style="background: white; padding: 15px; border-radius: 8px; margin-bottom: 15px;">
+                        <strong>⚠️ IMPORTANTE - Password e Backup:</strong><br>
+                        • Il backup richiede la password master usata QUANDO è stato creato<br>
+                        • Se cambi password master, i backup vecchi richiedono la password VECCHIA<br>
+                        • <strong>Soluzione:</strong> Dopo ogni cambio password, fai SUBITO un nuovo backup<br>
+                        • La domanda di sicurezza ti aiuta a ricordare quale password hai usato
+                    </div>
+                    
+                    <div style="background: white; padding: 15px; border-radius: 8px;">
+                        <strong>Come Importare:</strong><br>
+                        1. Clicca "📥 Import"<br>
+                        2. Scegli il file<br>
+                        3. Vedrai la domanda di sicurezza (se impostata) come promemoria<br>
+                        4. Importa → Verrai disconnesso<br>
+                        5. <strong>Accedi con la password master del BACKUP</strong>
+                    </div>
+                </div>
+
+                <!-- Cambio Password Master -->
+                <div style="margin-bottom: 20px;">
+                    <h3 style="color: #667eea; margin-bottom: 10px;">🔑 Cambio Password Master</h3>
+                    <div style="background: #fff3cd; padding: 15px; border-radius: 8px; border-left: 4px solid #ffc107; margin-bottom: 10px;">
+                        <strong>Procedura:</strong><br>
+                        1. Impostazioni → Cambia Password Master<br>
+                        2. Inserisci password ATTUALE<br>
+                        3. Inserisci NUOVA password (2 volte)<br>
+                        4. Aggiorna domanda di sicurezza<br>
+                        5. <strong>Ti verrà chiesto di fare backup SUBITO - FALLO!</strong>
+                    </div>
+                    <div style="background: #fee2e2; padding: 15px; border-radius: 8px; border-left: 4px solid #dc2626;">
+                        <strong>⚠️ ATTENZIONE:</strong><br>
+                        Dopo il cambio, i backup precedenti richiedono la password VECCHIA.<br>
+                        I nuovi backup richiederanno la password NUOVA.
+                    </div>
+                </div>
+
+                <!-- Eliminazione Dati -->
+                <div style="margin-bottom: 20px;">
+                    <h3 style="color: #dc3545; margin-bottom: 10px;">🗑️ Eliminazione Dati</h3>
+                    <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 10px;">
+                        <strong>1. Elimina Tutti i Dati:</strong><br>
+                        • Elimina password e informazioni<br>
+                        • MANTIENE password master e impostazioni<br>
+                        • Rimani loggato con app vuota<br>
+                        • ⚠️ Backup con password diversa NON funzioneranno
+                    </div>
+                    <div style="background: #f8f9fa; padding: 15px; border-radius: 8px;">
+                        <strong>2. Reset Completo App:</strong><br>
+                        • Elimina TUTTO (password master inclusa)<br>
+                        • App torna come nuova<br>
+                        • Dopo puoi importare un backup (serve password del backup)
+                    </div>
+                </div>
+
+                <!-- Impostazioni -->
+                <div style="margin-bottom: 20px;">
+                    <h3 style="color: #667eea; margin-bottom: 10px;">⚙️ Impostazioni</h3>
+                    <ul style="margin: 10px 0; padding-left: 20px; color: #666; line-height: 1.8;">
+                        <li><strong>Timeout Inattività:</strong> 1-30 min o Mai (consiglio: 5-10 min)</li>
+                        <li><strong>Durata Visualizzazione:</strong> 5-30 sec o Mai (consiglio: 10 sec)</li>
+                        <li><strong>Cancellazione Appunti:</strong> 15 sec - 2 min o Mai (consiglio: 30 sec)</li>
+                        <li><strong>Promemoria Backup:</strong> Dopo quante modifiche ricordare (consiglio: 3-5)</li>
+                        <li><strong>Altre opzioni:</strong> Indicatore forza password, Conferma eliminazione</li>
+                    </ul>
+                </div>
+
+                <!-- Sicurezza -->
+                <div style="margin-bottom: 20px;">
+                    <h3 style="color: #667eea; margin-bottom: 10px;">🛡️ Sicurezza</h3>
+                    <div style="background: #d4edda; padding: 15px; border-radius: 8px; border-left: 4px solid #28a745;">
+                        <strong>✅ Crittografia Militare:</strong><br>
+                        • AES-256 + PBKDF2 (100.000 iterazioni)<br>
+                        • 100% offline, nessun server<br>
+                        • Nessuno può leggere i dati senza password master
+                    </div>
+                </div>
+
+                <!-- Consigli -->
+                <div style="margin-bottom: 20px;">
+                    <h3 style="color: #667eea; margin-bottom: 10px;">💡 Best Practices</h3>
+                    <ul style="margin: 10px 0; padding-left: 20px; color: #666; line-height: 1.8;">
+                        <li>✅ Password master FORTE e MEMORABILE</li>
+                        <li>✅ Scrivi la password master su carta (posto sicuro)</li>
+                        <li>✅ Backup ALMENO mensili</li>
+                        <li>✅ Backup in 2-3 posti diversi (USB, cloud, disco)</li>
+                        <li>✅ Dopo cambio password → backup immediato</li>
+                        <li>✅ Usa password uniche per ogni account</li>
+                        <li>✅ Sfrutta il generatore di password</li>
+                        <li>⚠️ NON condividere password master</li>
+                        <li>⚠️ NON salvare password master sul dispositivo</li>
+                    </ul>
+                </div>
+
+                <!-- FAQ Critiche -->
+                <div style="margin-bottom: 20px;">
+                    <h3 style="color: #667eea; margin-bottom: 10px;">❓ Domande Frequenti</h3>
+                    <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 10px;">
+                        <strong>Q: Ho dimenticato la password master?</strong><br>
+                        A: Non recuperabile. Hai perso tutto. Per questo: scrivila su carta o fai backup regolari.
+                    </div>
+                    <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 10px;">
+                        <strong>Q: Ho cambiato password e i backup vecchi non funzionano?</strong><br>
+                        A: Normale. Guarda la domanda di sicurezza nel backup, ti aiuta a ricordare quale password usavi.
+                    </div>
+                    <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 10px;">
+                        <strong>Q: Posso importare backup dopo Reset Completo?</strong><br>
+                        A: Sì! Devi conoscere la password master con cui è stato creato il backup.
+                    </div>
+                    <div style="background: #f8f9fa; padding: 15px; border-radius: 8px;">
+                        <strong>Q: I miei dati sono al sicuro?</strong><br>
+                        A: Sì, con crittografia AES-256. MA dipende da te: password forte, backup sicuri, dispositivo protetto.
+                    </div>
+                </div>
+
+                <!-- Emergenze -->
+                <div style="margin-bottom: 20px; padding: 15px; background: #fee2e2; border: 2px solid #dc2626; border-radius: 8px;">
+                    <h3 style="margin: 0 0 15px 0; color: #dc2626;">🆘 Emergenze</h3>
+                    <strong>Ho dimenticato la password master:</strong> Nessuna soluzione. Hai perso tutto.<br>
+                    <strong>Ho perso il dispositivo:</strong> Import backup su nuovo dispositivo.<br>
+                    <strong>Browser resettato:</strong> Import backup.<br>
+                    <strong>Cambio password e non ricordo la vecchia:</strong> Guarda domanda di sicurezza nel backup.
+                </div>
+
+            </div>
+
+            <div class="modal-actions">
+                <button class="btn btn-secondary" onclick="closeInstructions()">Chiudi</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div class="toast" id="toast"></div>
+
+    <script>
+        // Global variables
+        let masterKey = null;
+        let currentEditId = null;
+        let currentMemoryEditId = null;
+        let currentCategoryType = 'password'; // 'password' or 'memory'
+        let inactivityTimer = null;
+        let currentTab = 'passwords';
+        let settings = {
+            inactivityTimeout: 5,
+            autoHideDelay: 10,
+            clipboardClearDelay: 30,
+            showPasswordStrength: true,
+            confirmDelete: true,
+            backupReminder: true,
+            backupReminderThreshold: 3
+        };
+        const INACTIVITY_TIMEOUT = 5 * 60 * 1000; // Will be overridden by settings
+        
+        // Default categories for passwords (alphabetical order)
+        const DEFAULT_PASSWORD_CATEGORIES = ['Applicazioni', 'Banking', 'Dispositivi elettronici', 'Email', 'Piattaforme Web', 'Social'];
+        
+        // Default categories for digital memory
+        const DEFAULT_MEMORY_CATEGORIES = ['Abbonamenti', 'Assicurazioni', 'Dati Bancari', 'Dati Fiscali', 'Documenti Personali', 'Altro'];
+
+        // Initialize app
+        document.addEventListener('DOMContentLoaded', function() {
+            // Load settings
+            const savedSettings = localStorage.getItem('passwordManager_settings');
+            if (savedSettings) {
+                settings = { ...settings, ...JSON.parse(savedSettings) };
+            }
+            
+            // Initialize password categories if not exists
+            if (!localStorage.getItem('passwordManager_categories')) {
+                localStorage.setItem('passwordManager_categories', JSON.stringify(DEFAULT_PASSWORD_CATEGORIES));
+            }
+            
+            // Initialize memory categories if not exists
+            if (!localStorage.getItem('passwordManager_memoryCategories')) {
+                localStorage.setItem('passwordManager_memoryCategories', JSON.stringify(DEFAULT_MEMORY_CATEGORIES));
+            }
+            
+            // Initialize memory data if not exists
+            if (!localStorage.getItem('passwordManager_memoryData')) {
+                localStorage.setItem('passwordManager_memoryData', JSON.stringify([]));
+            }
+            
+            // Set up inactivity timer
+            resetInactivityTimer();
+            document.addEventListener('mousemove', resetInactivityTimer);
+            document.addEventListener('keypress', resetInactivityTimer);
+            document.addEventListener('click', resetInactivityTimer);
+            document.addEventListener('scroll', resetInactivityTimer);
+            
+            // PWA Install prompt
+            let deferredPrompt;
+            window.addEventListener('beforeinstallprompt', (e) => {
+                e.preventDefault();
+                deferredPrompt = e;
+                
+                // Show install button if not already installed
+                if (!window.matchMedia('(display-mode: standalone)').matches) {
+                    showInstallPrompt(deferredPrompt);
+                }
+            });
+            
+            // Check if already installed
+            window.addEventListener('appinstalled', () => {
+                console.log('SMEMOPASS installato con successo!');
+            });
+        });
+
+        function showInstallPrompt(deferredPrompt) {
+            // Check if user already dismissed the prompt
+            if (localStorage.getItem('installPromptDismissed')) return;
+            
+            // Create install banner (only show once after first login)
+            const banner = document.createElement('div');
+            banner.style.cssText = `
+                position: fixed;
+                bottom: 20px;
+                left: 50%;
+                transform: translateX(-50%);
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                color: white;
+                padding: 15px 25px;
+                border-radius: 12px;
+                box-shadow: 0 5px 20px rgba(0,0,0,0.3);
+                z-index: 3000;
+                display: flex;
+                gap: 15px;
+                align-items: center;
+                max-width: 90%;
+                animation: slideUp 0.3s ease;
+            `;
+            
+            banner.innerHTML = `
+                <div style="flex: 1;">
+                    <strong>📱 Installa SMEMOPASS</strong><br>
+                    <small>Aggiungi l'app alla tua home screen</small>
+                </div>
+                <button onclick="installPWA()" style="background: white; color: #667eea; border: none; padding: 8px 16px; border-radius: 6px; font-weight: 600; cursor: pointer;">
+                    Installa
+                </button>
+                <button onclick="dismissInstallPrompt()" style="background: rgba(255,255,255,0.2); color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer;">
+                    ✕
+                </button>
+            `;
+            
+            // Only show after successful login
+            setTimeout(() => {
+                if (masterKey) {
+                    document.body.appendChild(banner);
+                    window.installBanner = banner;
+                    window.deferredPrompt = deferredPrompt;
+                }
+            }, 3000);
+        }
+
+        async function installPWA() {
+            const deferredPrompt = window.deferredPrompt;
+            if (!deferredPrompt) return;
+            
+            deferredPrompt.prompt();
+            const { outcome } = await deferredPrompt.userChoice;
+            
+            if (outcome === 'accepted') {
+                showToast('SMEMOPASS verrà installata!', 'success');
+            }
+            
+            window.deferredPrompt = null;
+            if (window.installBanner) {
+                window.installBanner.remove();
+            }
+        }
+
+        function dismissInstallPrompt() {
+            localStorage.setItem('installPromptDismissed', 'true');
+            if (window.installBanner) {
+                window.installBanner.remove();
+            }
+        }
+
+        // Inactivity auto-lock
+        function resetInactivityTimer() {
+            if (masterKey && settings.inactivityTimeout > 0) {
+                clearTimeout(inactivityTimer);
+                inactivityTimer = setTimeout(() => {
+                    logout();
+                    showToast('Sessione scaduta per inattività', 'error');
+                }, settings.inactivityTimeout * 60 * 1000);
+            }
+        }
+
+        // Modal management helpers (prevent pull-to-refresh on mobile)
+        function openModalHelper(modalId) {
+            document.getElementById(modalId).classList.add('active');
+            document.body.classList.add('modal-open');
+        }
+
+        function closeModalHelper(modalId) {
+            document.getElementById(modalId).classList.remove('active');
+            document.body.classList.remove('modal-open');
+        }
+
+        // Auto-detect modal open/close and manage body class
+        document.addEventListener('DOMContentLoaded', function() {
+            const modals = document.querySelectorAll('.modal');
+            
+            modals.forEach(modal => {
+                const observer = new MutationObserver(function(mutations) {
+                    mutations.forEach(function(mutation) {
+                        if (mutation.attributeName === 'class') {
+                            const isActive = modal.classList.contains('active');
+                            if (isActive) {
+                                document.body.classList.add('modal-open');
+                            } else {
+                                // Check if any other modal is open
+                                const anyModalOpen = Array.from(modals).some(m => m.classList.contains('active'));
+                                if (!anyModalOpen) {
+                                    document.body.classList.remove('modal-open');
+                                }
+                            }
+                        }
+                    });
+                });
+                
+                observer.observe(modal, { attributes: true });
+            });
+
+            // Prevent pull-to-refresh on mobile
+            let lastTouchY = 0;
+            let preventPullToRefresh = false;
+
+            document.addEventListener('touchstart', function(e) {
+                if (e.touches.length !== 1) return;
+                lastTouchY = e.touches[0].clientY;
+
+                // Check if any scrollable element is at top
+                preventPullToRefresh = isAtTop();
+            }, { passive: false });
+
+            document.addEventListener('touchmove', function(e) {
+                if (e.touches.length !== 1) return;
+                
+                const touchY = e.touches[0].clientY;
+                const touchYDelta = touchY - lastTouchY;
+
+                // Prevent if pulling down at the top
+                if (preventPullToRefresh && touchYDelta > 0) {
+                    e.preventDefault();
+                }
+            }, { passive: false });
+
+            function isAtTop() {
+                // Check if window is at top
+                if (window.pageYOffset > 0) return false;
+                
+                // Check if any active scrollable container is at top
+                const scrollContainers = document.querySelectorAll('.main-content, .tab-content, .container');
+                
+                for (let container of scrollContainers) {
+                    if (container.scrollTop > 0) {
+                        return false;
+                    }
+                }
+                
+                return true;
+            }
+        });
+
+        // Crypto functions
+        async function deriveKey(password, salt) {
+            const encoder = new TextEncoder();
+            const keyMaterial = await crypto.subtle.importKey(
+                'raw',
+                encoder.encode(password),
+                'PBKDF2',
+                false,
+                ['deriveBits', 'deriveKey']
+            );
+            
+            return crypto.subtle.deriveKey(
+                {
+                    name: 'PBKDF2',
+                    salt: salt,
+                    iterations: 100000,
+                    hash: 'SHA-256'
+                },
+                keyMaterial,
+                { name: 'AES-GCM', length: 256 },
+                true,
+                ['encrypt', 'decrypt']
+            );
+        }
+
+        async function encrypt(text, key) {
+            const encoder = new TextEncoder();
+            const data = encoder.encode(text);
+            const iv = crypto.getRandomValues(new Uint8Array(12));
+            
+            const encrypted = await crypto.subtle.encrypt(
+                { name: 'AES-GCM', iv: iv },
+                key,
+                data
+            );
+            
+            const result = new Uint8Array(iv.length + encrypted.byteLength);
+            result.set(iv, 0);
+            result.set(new Uint8Array(encrypted), iv.length);
+            
+            return btoa(String.fromCharCode(...result));
+        }
+
+        async function decrypt(encryptedText, key) {
+            try {
+                const data = Uint8Array.from(atob(encryptedText), c => c.charCodeAt(0));
+                const iv = data.slice(0, 12);
+                const encrypted = data.slice(12);
+                
+                const decrypted = await crypto.subtle.decrypt(
+                    { name: 'AES-GCM', iv: iv },
+                    key,
+                    encrypted
+                );
+                
+                const decoder = new TextDecoder();
+                return decoder.decode(decrypted);
+            } catch (e) {
+                throw new Error('Decrittazione fallita');
+            }
+        }
+
+        // First time setup
+        function showFirstTimeSetup() {
+            document.getElementById('loginScreen').style.display = 'none';
+            document.getElementById('setupScreen').style.display = 'block';
+        }
+
+        function backToLogin() {
+            document.getElementById('setupScreen').style.display = 'none';
+            document.getElementById('loginScreen').style.display = 'block';
+            document.getElementById('setupPassword').value = '';
+            document.getElementById('setupPasswordConfirm').value = '';
+        }
+
+        function completeSetup() {
+            const password = document.getElementById('setupPassword').value;
+            const confirmPassword = document.getElementById('setupPasswordConfirm').value;
+            const securityQuestion = document.getElementById('setupSecurityQuestion').value.trim();
+            
+            if (!password || password.length < 8) {
+                showToast('La password deve essere di almeno 8 caratteri', 'error');
+                return;
+            }
+            
+            if (password !== confirmPassword) {
+                showToast('Le password non coincidono', 'error');
+                return;
+            }
+            
+            // Initialize storage
+            const salt = crypto.getRandomValues(new Uint8Array(16));
+            localStorage.setItem('passwordManager_salt', btoa(String.fromCharCode(...salt)));
+            localStorage.setItem('passwordManager_initialized', 'true');
+            localStorage.setItem('passwordManager_data', JSON.stringify([]));
+            
+            // Save security question if provided
+            if (securityQuestion) {
+                localStorage.setItem('passwordManager_securityQuestion', securityQuestion);
+            }
+            
+            // Clear fields
+            document.getElementById('setupPassword').value = '';
+            document.getElementById('setupPasswordConfirm').value = '';
+            document.getElementById('setupSecurityQuestion').value = '';
+            
+            // Go back to login
+            backToLogin();
+            
+            showToast('Configurazione completata! Ora puoi accedere.', 'success');
+        }
+
+        // Login
+        async function login() {
+            const password = document.getElementById('masterPassword').value;
+            
+            if (!password) {
+                showToast('Inserisci la password', 'error');
+                return;
+            }
+            
+            if (!localStorage.getItem('passwordManager_initialized')) {
+                showToast('Esegui prima la configurazione iniziale', 'error');
+                return;
+            }
+            
+            try {
+                const saltStr = localStorage.getItem('passwordManager_salt');
+                const salt = Uint8Array.from(atob(saltStr), c => c.charCodeAt(0));
+                
+                masterKey = await deriveKey(password, salt);
+                
+                // Try to decrypt data to verify password
+                const encryptedData = localStorage.getItem('passwordManager_data');
+                if (encryptedData && encryptedData !== '[]') {
+                    try {
+                        const data = JSON.parse(encryptedData);
+                        if (data.length > 0) {
+                            await decrypt(data[0].password, masterKey);
+                        }
+                    } catch (e) {
+                        showToast('Password errata', 'error');
+                        masterKey = null;
+                        return;
+                    }
+                }
+                
+                document.getElementById('loginScreen').style.display = 'none';
+                document.getElementById('mainApp').style.display = 'block';
+                document.getElementById('masterPassword').value = '';
+                
+                loadCategories();
+                loadMemoryCategories();
+                loadPasswords();
+                loadMemory();
+                loadDashboard();
+                resetInactivityTimer();
+                showToast('Accesso effettuato', 'success');
+            } catch (e) {
+                showToast('Errore durante l\'accesso', 'error');
+            }
+        }
+
+        // Logout
+        function logout() {
+            masterKey = null;
+            currentEditId = null;
+            currentMemoryEditId = null;
+            clearTimeout(inactivityTimer);
+            
+            document.getElementById('mainApp').style.display = 'none';
+            document.getElementById('loginScreen').style.display = 'block';
+            document.getElementById('passwordList').innerHTML = '';
+            document.getElementById('memoryList').innerHTML = '';
+            document.getElementById('searchInput').value = '';
+            document.getElementById('searchMemoryInput').value = '';
+            document.getElementById('categoryFilter').value = '';
+            document.getElementById('memoryCategoryFilter').value = '';
+            
+            // Reset to dashboard tab
+            switchTab('dashboard');
+        }
+
+        // Tab switching
+        function switchTab(tab) {
+            currentTab = tab;
+            
+            // Update tab buttons
+            document.querySelectorAll('.tab-btn').forEach((btn, index) => {
+                btn.classList.remove('active');
+                // Add active class to the correct button
+                if ((tab === 'dashboard' && index === 0) || 
+                    (tab === 'passwords' && index === 1) || 
+                    (tab === 'memory' && index === 2)) {
+                    btn.classList.add('active');
+                }
+            });
+            
+            // Update tab content
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            
+            if (tab === 'dashboard') {
+                document.getElementById('dashboardSection').classList.add('active');
+                loadDashboard(); // Refresh dashboard data
+            } else if (tab === 'passwords') {
+                document.getElementById('passwordSection').classList.add('active');
+            } else if (tab === 'memory') {
+                document.getElementById('memorySection').classList.add('active');
+            }
+        }
+
+        // Dashboard Functions
+        async function loadDashboard() {
+            const passwordData = JSON.parse(localStorage.getItem('passwordManager_data') || '[]');
+            const memoryData = JSON.parse(localStorage.getItem('passwordManager_memoryData') || '[]');
+            
+            // Update statistics
+            document.getElementById('totalPasswords').textContent = passwordData.length;
+            document.getElementById('totalMemory').textContent = memoryData.length;
+            
+            // Analyze passwords
+            const analysis = await analyzePasswords(passwordData);
+            
+            document.getElementById('weakPasswords').textContent = analysis.weak.length;
+            document.getElementById('duplicatePasswords').textContent = analysis.duplicates.length;
+            
+            // Display security issues
+            displaySecurityIssues(analysis);
+            
+            // Display old passwords
+            displayOldPasswords(analysis.old);
+            
+            // Display category distribution
+            displayCategoryChart(passwordData, memoryData);
+        }
+
+        async function analyzePasswords(passwordData) {
+            const weak = [];
+            const duplicates = [];
+            const old = [];
+            const passwordMap = new Map();
+            
+            for (const entry of passwordData) {
+                try {
+                    const decryptedPassword = await decrypt(entry.password, masterKey);
+                    
+                    // Check password strength
+                    const strength = calculatePasswordStrength(decryptedPassword);
+                    if (strength <= 2) {
+                        weak.push({ ...entry, decryptedPassword });
+                    }
+                    
+                    // Check for duplicates
+                    if (passwordMap.has(decryptedPassword)) {
+                        const existing = passwordMap.get(decryptedPassword);
+                        if (!duplicates.find(d => d.password === decryptedPassword)) {
+                            duplicates.push({
+                                password: decryptedPassword,
+                                entries: [existing, entry]
+                            });
+                        } else {
+                            const dup = duplicates.find(d => d.password === decryptedPassword);
+                            dup.entries.push(entry);
+                        }
+                    } else {
+                        passwordMap.set(decryptedPassword, entry);
+                    }
+                    
+                    // Check password age (6+ months old)
+                    const updatedDate = new Date(entry.updatedAt || entry.createdAt);
+                    const sixMonthsAgo = new Date();
+                    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+                    
+                    if (updatedDate < sixMonthsAgo) {
+                        old.push(entry);
+                    }
+                } catch (e) {
+                    console.error('Error analyzing password:', e);
+                }
+            }
+            
+            return { weak, duplicates, old };
+        }
+
+        function calculatePasswordStrength(password) {
+            let strength = 0;
+            if (password.length >= 8) strength++;
+            if (password.length >= 12) strength++;
+            if (/[a-z]/.test(password) && /[A-Z]/.test(password)) strength++;
+            if (/[0-9]/.test(password)) strength++;
+            if (/[^a-zA-Z0-9]/.test(password)) strength++;
+            return strength;
+        }
+
+        function displaySecurityIssues(analysis) {
+            const container = document.getElementById('securityIssues');
+            container.innerHTML = '';
+            
+            if (analysis.weak.length === 0 && analysis.duplicates.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-dashboard">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                        <h3>Nessun problema rilevato! 🎉</h3>
+                        <p>Tutte le tue password sono sicure</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            // Weak passwords
+            analysis.weak.forEach(entry => {
+                const item = document.createElement('div');
+                item.className = 'issue-item';
+                item.innerHTML = `
+                    <div class="issue-content">
+                        <div class="issue-title">⚠️ Password Debole: ${escapeHtml(entry.title)}</div>
+                        <div class="issue-description">Questa password è troppo semplice e dovrebbe essere cambiata</div>
+                    </div>
+                    <button class="issue-action" onclick="editEntryFromDashboard('${entry.id}')">Aggiorna</button>
+                `;
+                container.appendChild(item);
+            });
+            
+            // Duplicate passwords
+            analysis.duplicates.forEach(dup => {
+                const item = document.createElement('div');
+                item.className = 'issue-item warning';
+                
+                // Create buttons for each entry
+                const buttonsHtml = dup.entries.map(e => 
+                    `<button class="issue-action" onclick="editEntryFromDashboard('${e.id}')" style="margin: 2px;">${escapeHtml(e.title)}</button>`
+                ).join('');
+                
+                item.innerHTML = `
+                    <div class="issue-content">
+                        <div class="issue-title">🔄 Password Duplicata</div>
+                        <div class="issue-description">Usata in ${dup.entries.length} account. Clicca per modificare:</div>
+                    </div>
+                    <div style="display: flex; flex-wrap: wrap; gap: 5px;">
+                        ${buttonsHtml}
+                    </div>
+                `;
+                container.appendChild(item);
+            });
+        }
+
+        function displayOldPasswords(oldPasswords) {
+            const container = document.getElementById('oldPasswords');
+            container.innerHTML = '';
+            
+            if (oldPasswords.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-dashboard">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                        <h3>Tutte le password sono recenti! ✅</h3>
+                    </div>
+                `;
+                return;
+            }
+            
+            oldPasswords.forEach(entry => {
+                const updatedDate = new Date(entry.updatedAt || entry.createdAt);
+                const monthsOld = Math.floor((Date.now() - updatedDate) / (1000 * 60 * 60 * 24 * 30));
+                
+                const item = document.createElement('div');
+                item.className = 'issue-item info';
+                item.innerHTML = `
+                    <div class="issue-content">
+                        <div class="issue-title">⏰ ${escapeHtml(entry.title)}</div>
+                        <div class="issue-description">Non aggiornata da ${monthsOld} mesi</div>
+                    </div>
+                    <button class="issue-action" onclick="editEntryFromDashboard('${entry.id}')">Aggiorna</button>
+                `;
+                container.appendChild(item);
+            });
+        }
+
+        function displayCategoryChart(passwordData, memoryData) {
+            const container = document.getElementById('categoryChart');
+            container.innerHTML = '';
+            
+            // Count by category
+            const categoryCounts = {};
+            
+            passwordData.forEach(entry => {
+                categoryCounts[entry.category] = (categoryCounts[entry.category] || 0) + 1;
+            });
+            
+            memoryData.forEach(entry => {
+                categoryCounts[entry.category] = (categoryCounts[entry.category] || 0) + 1;
+            });
+            
+            if (Object.keys(categoryCounts).length === 0) {
+                container.innerHTML = `
+                    <div class="empty-dashboard">
+                        <p>Nessun dato disponibile</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            const maxCount = Math.max(...Object.values(categoryCounts));
+            
+            // Sort by count descending
+            const sortedCategories = Object.entries(categoryCounts)
+                .sort((a, b) => b[1] - a[1]);
+            
+            sortedCategories.forEach(([category, count]) => {
+                const percentage = (count / maxCount) * 100;
+                
+                const barContainer = document.createElement('div');
+                barContainer.className = 'category-bar-container';
+                barContainer.innerHTML = `
+                    <div class="category-bar-label">${escapeHtml(category)}</div>
+                    <div class="category-bar-wrapper">
+                        <div class="category-bar-fill" style="width: ${percentage}%">${count}</div>
+                    </div>
+                `;
+                container.appendChild(barContainer);
+            });
+        }
+
+        function editEntryFromDashboard(id) {
+            // Switch to passwords tab and edit
+            const tabs = document.querySelectorAll('.tab-btn');
+            tabs.forEach(btn => btn.classList.remove('active'));
+            tabs[1].classList.add('active'); // Password tab
+            
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            document.getElementById('passwordSection').classList.add('active');
+            
+            // Edit the entry
+            setTimeout(() => editEntry(id), 100);
+        }
+
+        // Category Management
+        function loadCategories() {
+            const categories = JSON.parse(localStorage.getItem('passwordManager_categories') || JSON.stringify(DEFAULT_PASSWORD_CATEGORIES));
+            
+            // Update filter dropdown
+            const filterSelect = document.getElementById('categoryFilter');
+            filterSelect.innerHTML = '<option value="">Tutte le categorie</option>';
+            categories.forEach(cat => {
+                const option = document.createElement('option');
+                option.value = cat;
+                option.textContent = cat;
+                filterSelect.appendChild(option);
+            });
+            
+            // Update entry category dropdown
+            const entrySelect = document.getElementById('entryCategory');
+            entrySelect.innerHTML = '';
+            categories.forEach(cat => {
+                const option = document.createElement('option');
+                option.value = cat;
+                option.textContent = cat;
+                entrySelect.appendChild(option);
+            });
+        }
+
+        function loadMemoryCategories() {
+            const categories = JSON.parse(localStorage.getItem('passwordManager_memoryCategories') || JSON.stringify(DEFAULT_MEMORY_CATEGORIES));
+            
+            // Update filter dropdown
+            const filterSelect = document.getElementById('memoryCategoryFilter');
+            filterSelect.innerHTML = '<option value="">Tutte le categorie</option>';
+            categories.forEach(cat => {
+                const option = document.createElement('option');
+                option.value = cat;
+                option.textContent = cat;
+                filterSelect.appendChild(option);
+            });
+            
+            // Update memory entry category dropdown
+            const entrySelect = document.getElementById('memoryCategory');
+            entrySelect.innerHTML = '';
+            categories.forEach(cat => {
+                const option = document.createElement('option');
+                option.value = cat;
+                option.textContent = cat;
+                entrySelect.appendChild(option);
+            });
+        }
+
+        function showCategoryManager(type) {
+            currentCategoryType = type;
+            const isPassword = type === 'password';
+            
+            const storageKey = isPassword ? 'passwordManager_categories' : 'passwordManager_memoryCategories';
+            const defaultCategories = isPassword ? DEFAULT_PASSWORD_CATEGORIES : DEFAULT_MEMORY_CATEGORIES;
+            
+            const categories = JSON.parse(localStorage.getItem(storageKey) || JSON.stringify(defaultCategories));
+            const categoryList = document.getElementById('categoryList');
+            
+            document.getElementById('categoryModalTitle').textContent = isPassword ? 'Gestione Categorie Password' : 'Gestione Categorie Memoria';
+            
+            categoryList.innerHTML = '';
+            categories.forEach(cat => {
+                const isDefault = defaultCategories.includes(cat);
+                const item = document.createElement('div');
+                item.className = 'category-item' + (isDefault ? ' default' : '');
+                
+                item.innerHTML = `
+                    <div>
+                        <span class="category-item-name">${escapeHtml(cat)}</span>
+                        ${isDefault ? '<span class="category-item-badge">Default</span>' : ''}
+                    </div>
+                    ${!isDefault ? `<button class="btn-delete-category" onclick="deleteCategory('${escapeHtml(cat)}')">Elimina</button>` : ''}
+                `;
+                
+                categoryList.appendChild(item);
+            });
+            
+            document.getElementById('categoryModal').classList.add('active');
+        }
+
+        function closeCategoryModal() {
+            document.getElementById('categoryModal').classList.remove('active');
+            document.getElementById('newCategoryName').value = '';
+        }
+
+        function addCategory() {
+            const categoryName = document.getElementById('newCategoryName').value.trim();
+            
+            if (!categoryName) {
+                showToast('Inserisci un nome per la categoria', 'error');
+                return;
+            }
+            
+            const isPassword = currentCategoryType === 'password';
+            const storageKey = isPassword ? 'passwordManager_categories' : 'passwordManager_memoryCategories';
+            const defaultCategories = isPassword ? DEFAULT_PASSWORD_CATEGORIES : DEFAULT_MEMORY_CATEGORIES;
+            
+            const categories = JSON.parse(localStorage.getItem(storageKey) || JSON.stringify(defaultCategories));
+            
+            if (categories.includes(categoryName)) {
+                showToast('Questa categoria esiste già', 'error');
+                return;
+            }
+            
+            categories.push(categoryName);
+            categories.sort(); // Keep alphabetical order
+            localStorage.setItem(storageKey, JSON.stringify(categories));
+            
+            document.getElementById('newCategoryName').value = '';
+            
+            if (isPassword) {
+                loadCategories();
+            } else {
+                loadMemoryCategories();
+            }
+            
+            showCategoryManager(currentCategoryType); // Refresh the list
+            showToast('Categoria aggiunta', 'success');
+        }
+
+        function deleteCategory(categoryName) {
+            const isPassword = currentCategoryType === 'password';
+            const dataKey = isPassword ? 'passwordManager_data' : 'passwordManager_memoryData';
+            const storageKey = isPassword ? 'passwordManager_categories' : 'passwordManager_memoryCategories';
+            const defaultCategories = isPassword ? DEFAULT_PASSWORD_CATEGORIES : DEFAULT_MEMORY_CATEGORIES;
+            
+            // Check if any entries use this category
+            const data = JSON.parse(localStorage.getItem(dataKey) || '[]');
+            const usedCount = data.filter(entry => entry.category === categoryName).length;
+            
+            if (usedCount > 0) {
+                showToast(`Impossibile eliminare: ${usedCount} ${isPassword ? 'password usano' : 'informazioni usano'} questa categoria`, 'error');
+                return;
+            }
+            
+            if (!confirm(`Eliminare la categoria "${categoryName}"?`)) {
+                return;
+            }
+            
+            let categories = JSON.parse(localStorage.getItem(storageKey) || JSON.stringify(defaultCategories));
+            categories = categories.filter(cat => cat !== categoryName);
+            
+            localStorage.setItem(storageKey, JSON.stringify(categories));
+            
+            if (isPassword) {
+                loadCategories();
+            } else {
+                loadMemoryCategories();
+            }
+            
+            showCategoryManager(currentCategoryType); // Refresh the list
+            showToast('Categoria eliminata', 'success');
+        }
+
+        // Load and display passwords
+        async function loadPasswords() {
+            const data = JSON.parse(localStorage.getItem('passwordManager_data') || '[]');
+            const container = document.getElementById('passwordList');
+            
+            if (data.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                            <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                        </svg>
+                        <h3>Nessuna password salvata</h3>
+                        <p>Clicca su "Aggiungi" per iniziare</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            container.innerHTML = '';
+            
+            for (const entry of data) {
+                const card = await createPasswordCard(entry);
+                container.appendChild(card);
+            }
+        }
+
+        // Create password card
+        async function createPasswordCard(entry) {
+            const card = document.createElement('div');
+            card.className = 'password-card';
+            card.dataset.id = entry.id;
+            card.dataset.category = entry.category;
+            card.dataset.searchtext = `${entry.title} ${entry.username || ''} ${entry.email || ''} ${entry.url || ''}`.toLowerCase();
+            
+            const decryptedPassword = await decrypt(entry.password, masterKey);
+            
+            // Format date
+            const updatedDate = new Date(entry.updatedAt || entry.createdAt);
+            const formattedDate = updatedDate.toLocaleDateString('it-IT', { 
+                day: '2-digit', 
+                month: '2-digit', 
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+            
+            card.innerHTML = `
+                <div class="password-card-header">
+                    <div>
+                        <div class="password-card-title">${escapeHtml(entry.title)}</div>
+                        <span class="password-card-category">${escapeHtml(entry.category)}</span>
+                    </div>
+                </div>
+                <div class="password-card-info">
+                    ${entry.username ? `<div><strong>Username:</strong> ${escapeHtml(entry.username)}</div>` : ''}
+                    ${entry.email ? `<div><strong>Email:</strong> ${escapeHtml(entry.email)}</div>` : ''}
+                    ${entry.url ? `<div><strong>URL:</strong> <a href="${escapeHtml(entry.url)}" target="_blank">${escapeHtml(entry.url)}</a></div>` : ''}
+                    <div><strong>Password:</strong> <span id="pwd-${entry.id}">••••••••</span></div>
+                    ${entry.notes ? `<div><strong>Note:</strong> ${escapeHtml(entry.notes)}</div>` : ''}
+                    <div style="margin-top: 10px; color: #999; font-size: 0.85em;">
+                        <strong>Ultima modifica:</strong> ${formattedDate}
+                    </div>
+                </div>
+                <div class="password-card-actions">
+                    <button class="icon-btn btn-copy" onclick="copyPassword('${entry.id}', '${escapeHtml(decryptedPassword)}')">📋 Copia</button>
+                    <button class="icon-btn btn-show" onclick="togglePassword('${entry.id}', '${escapeHtml(decryptedPassword)}')">👁️ Mostra</button>
+                    <button class="icon-btn btn-edit" onclick="editEntry('${entry.id}')">✏️ Modifica</button>
+                    <button class="icon-btn btn-delete" onclick="deleteEntry('${entry.id}')">🗑️ Elimina</button>
+                </div>
+            `;
+            
+            return card;
+        }
+
+        // Filter passwords
+        function filterPasswords() {
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            const category = document.getElementById('categoryFilter').value;
+            const cards = document.querySelectorAll('.password-card');
+            
+            cards.forEach(card => {
+                const matchesSearch = card.dataset.searchtext.includes(searchTerm);
+                const matchesCategory = !category || card.dataset.category === category;
+                
+                card.style.display = matchesSearch && matchesCategory ? 'block' : 'none';
+            });
+        }
+
+        // Show/hide password
+        function togglePassword(id, password) {
+            const span = document.getElementById(`pwd-${id}`);
+            if (span.textContent === '••••••••') {
+                span.textContent = password;
+                if (settings.autoHideDelay > 0) {
+                    setTimeout(() => {
+                        span.textContent = '••••••••';
+                    }, settings.autoHideDelay * 1000);
+                }
+            } else {
+                span.textContent = '••••••••';
+            }
+        }
+
+        // Helper function to reset modal scroll
+        function resetModalScroll(modalId) {
+            const modal = document.getElementById(modalId);
+            const modalContent = modal.querySelector('.modal-content');
+            if (modalContent) {
+                modalContent.scrollTop = 0;
+            }
+        }
+
+        // Copy password
+        async function copyPassword(id, password) {
+            try {
+                await navigator.clipboard.writeText(password);
+                showToast('Password copiata!', 'success');
+                
+                // Clear clipboard after configured time
+                if (settings.clipboardClearDelay > 0) {
+                    setTimeout(async () => {
+                        await navigator.clipboard.writeText('');
+                    }, settings.clipboardClearDelay * 1000);
+                }
+            } catch (e) {
+                showToast('Errore durante la copia', 'error');
+            }
+        }
+
+        // Show add modal
+        function showAddModal() {
+            currentEditId = null;
+            document.getElementById('modalTitle').textContent = 'Aggiungi Password';
+            clearModalFields();
+            document.getElementById('addEditModal').classList.add('active');
+            resetModalScroll('addEditModal');
+        }
+
+        // Edit entry
+        async function editEntry(id) {
+            const data = JSON.parse(localStorage.getItem('passwordManager_data') || '[]');
+            const entry = data.find(e => e.id === id);
+            
+            if (!entry) return;
+            
+            currentEditId = id;
+            document.getElementById('modalTitle').textContent = 'Modifica Password';
+            
+            document.getElementById('entryTitle').value = entry.title;
+            document.getElementById('entryCategory').value = entry.category;
+            document.getElementById('entryUsername').value = entry.username || '';
+            document.getElementById('entryEmail').value = entry.email || '';
+            document.getElementById('entryPassword').value = await decrypt(entry.password, masterKey);
+            document.getElementById('entryUrl').value = entry.url || '';
+            document.getElementById('entryNotes').value = entry.notes || '';
+            
+            document.getElementById('addEditModal').classList.add('active');
+            resetModalScroll('addEditModal');
+            checkPasswordStrength();
+        }
+
+        // Save entry
+        async function saveEntry() {
+            const title = document.getElementById('entryTitle').value.trim();
+            const category = document.getElementById('entryCategory').value;
+            const username = document.getElementById('entryUsername').value.trim();
+            const email = document.getElementById('entryEmail').value.trim();
+            const password = document.getElementById('entryPassword').value;
+            const url = document.getElementById('entryUrl').value.trim();
+            const notes = document.getElementById('entryNotes').value.trim();
+            
+            if (!title || !password) {
+                showToast('Titolo e password sono obbligatori', 'error');
+                return;
+            }
+            
+            const data = JSON.parse(localStorage.getItem('passwordManager_data') || '[]');
+            const encryptedPassword = await encrypt(password, masterKey);
+            
+            if (currentEditId) {
+                // Edit existing
+                const index = data.findIndex(e => e.id === currentEditId);
+                if (index !== -1) {
+                    data[index] = {
+                        ...data[index],
+                        title,
+                        category,
+                        username,
+                        email,
+                        password: encryptedPassword,
+                        url,
+                        notes,
+                        updatedAt: new Date().toISOString()
+                    };
+                }
+            } else {
+                // Add new
+                data.push({
+                    id: Date.now().toString(),
+                    title,
+                    category,
+                    username,
+                    email,
+                    password: encryptedPassword,
+                    url,
+                    notes,
+                    createdAt: new Date().toISOString(),
+                    updatedAt: new Date().toISOString()
+                });
+            }
+            
+            localStorage.setItem('passwordManager_data', JSON.stringify(data));
+            closeModal();
+            loadPasswords();
+            if (currentTab === 'dashboard') loadDashboard();
+            incrementChanges();
+            showToast(currentEditId ? 'Password aggiornata' : 'Password aggiunta', 'success');
+        }
+
+        // Delete entry
+        function deleteEntry(id) {
+            if (settings.confirmDelete && !confirm('Sei sicuro di voler eliminare questa password?')) return;
+            
+            let data = JSON.parse(localStorage.getItem('passwordManager_data') || '[]');
+            data = data.filter(e => e.id !== id);
+            
+            localStorage.setItem('passwordManager_data', JSON.stringify(data));
+            loadPasswords();
+            if (currentTab === 'dashboard') loadDashboard();
+            incrementChanges();
+            showToast('Password eliminata', 'success');
+        }
+
+        // Memory Management Functions
+        async function loadMemory() {
+            const data = JSON.parse(localStorage.getItem('passwordManager_memoryData') || '[]');
+            const container = document.getElementById('memoryList');
+            
+            if (data.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M12 2v20M2 12h20M6 6h12v12H6z"></path>
+                        </svg>
+                        <h3>Nessuna informazione salvata</h3>
+                        <p>Clicca su "Aggiungi" per iniziare</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            container.innerHTML = '';
+            
+            for (const entry of data) {
+                const card = await createMemoryCard(entry);
+                container.appendChild(card);
+            }
+        }
+
+        async function createMemoryCard(entry) {
+            const card = document.createElement('div');
+            card.className = 'password-card';
+            card.dataset.id = entry.id;
+            card.dataset.category = entry.category;
+            card.dataset.searchtext = `${entry.title} ${entry.additionalInfo || ''} ${entry.notes || ''}`.toLowerCase();
+            
+            const decryptedData = await decrypt(entry.data, masterKey);
+            
+            // Format date
+            const updatedDate = new Date(entry.updatedAt || entry.createdAt);
+            const formattedDate = updatedDate.toLocaleDateString('it-IT', { 
+                day: '2-digit', 
+                month: '2-digit', 
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+            
+            card.innerHTML = `
+                <div class="password-card-header">
+                    <div>
+                        <div class="password-card-title">${escapeHtml(entry.title)}</div>
+                        <span class="password-card-category">${escapeHtml(entry.category)}</span>
+                    </div>
+                </div>
+                <div class="password-card-info">
+                    <div><strong>Informazione:</strong> <span id="mem-${entry.id}">••••••••</span></div>
+                    ${entry.additionalInfo ? `<div><strong>Dettagli:</strong> ${escapeHtml(entry.additionalInfo)}</div>` : ''}
+                    ${entry.notes ? `<div><strong>Note:</strong> ${escapeHtml(entry.notes)}</div>` : ''}
+                    <div style="margin-top: 10px; color: #999; font-size: 0.85em;">
+                        <strong>Ultima modifica:</strong> ${formattedDate}
+                    </div>
+                </div>
+                <div class="password-card-actions">
+                    <button class="icon-btn btn-copy" onclick="copyMemoryData('${entry.id}', '${escapeHtml(decryptedData)}')">📋 Copia</button>
+                    <button class="icon-btn btn-show" onclick="toggleMemoryData('${entry.id}', '${escapeHtml(decryptedData)}')">👁️ Mostra</button>
+                    <button class="icon-btn btn-edit" onclick="editMemoryEntry('${entry.id}')">✏️ Modifica</button>
+                    <button class="icon-btn btn-delete" onclick="deleteMemoryEntry('${entry.id}')">🗑️ Elimina</button>
+                </div>
+            `;
+            
+            return card;
+        }
+
+        function filterMemory() {
+            const searchTerm = document.getElementById('searchMemoryInput').value.toLowerCase();
+            const category = document.getElementById('memoryCategoryFilter').value;
+            const cards = document.querySelectorAll('#memoryList .password-card');
+            
+            cards.forEach(card => {
+                const matchesSearch = card.dataset.searchtext.includes(searchTerm);
+                const matchesCategory = !category || card.dataset.category === category;
+                
+                card.style.display = matchesSearch && matchesCategory ? 'block' : 'none';
+            });
+        }
+
+        function toggleMemoryData(id, data) {
+            const span = document.getElementById(`mem-${id}`);
+            if (span.textContent === '••••••••') {
+                span.textContent = data;
+                if (settings.autoHideDelay > 0) {
+                    setTimeout(() => {
+                        span.textContent = '••••••••';
+                    }, settings.autoHideDelay * 1000);
+                }
+            } else {
+                span.textContent = '••••••••';
+            }
+        }
+
+        async function copyMemoryData(id, data) {
+            try {
+                await navigator.clipboard.writeText(data);
+                showToast('Informazione copiata!', 'success');
+                
+                if (settings.clipboardClearDelay > 0) {
+                    setTimeout(async () => {
+                        await navigator.clipboard.writeText('');
+                    }, settings.clipboardClearDelay * 1000);
+                }
+            } catch (e) {
+                showToast('Errore durante la copia', 'error');
+            }
+        }
+
+        function showAddMemoryModal() {
+            currentMemoryEditId = null;
+            document.getElementById('memoryModalTitle').textContent = 'Aggiungi Informazione';
+            clearMemoryModalFields();
+            document.getElementById('addEditMemoryModal').classList.add('active');
+            resetModalScroll('addEditMemoryModal');
+        }
+
+        async function editMemoryEntry(id) {
+            const data = JSON.parse(localStorage.getItem('passwordManager_memoryData') || '[]');
+            const entry = data.find(e => e.id === id);
+            
+            if (!entry) return;
+            
+            currentMemoryEditId = id;
+            document.getElementById('memoryModalTitle').textContent = 'Modifica Informazione';
+            
+            document.getElementById('memoryTitle').value = entry.title;
+            document.getElementById('memoryCategory').value = entry.category;
+            document.getElementById('memoryData').value = await decrypt(entry.data, masterKey);
+            document.getElementById('memoryAdditionalInfo').value = entry.additionalInfo || '';
+            document.getElementById('memoryNotes').value = entry.notes || '';
+            
+            document.getElementById('addEditMemoryModal').classList.add('active');
+            resetModalScroll('addEditMemoryModal');
+        }
+
+        async function saveMemoryEntry() {
+            const title = document.getElementById('memoryTitle').value.trim();
+            const category = document.getElementById('memoryCategory').value;
+            const data = document.getElementById('memoryData').value.trim();
+            const additionalInfo = document.getElementById('memoryAdditionalInfo').value.trim();
+            const notes = document.getElementById('memoryNotes').value.trim();
+            
+            if (!title || !data) {
+                showToast('Titolo e informazione sono obbligatori', 'error');
+                return;
+            }
+            
+            const memoryData = JSON.parse(localStorage.getItem('passwordManager_memoryData') || '[]');
+            const encryptedData = await encrypt(data, masterKey);
+            
+            if (currentMemoryEditId) {
+                const index = memoryData.findIndex(e => e.id === currentMemoryEditId);
+                if (index !== -1) {
+                    memoryData[index] = {
+                        ...memoryData[index],
+                        title,
+                        category,
+                        data: encryptedData,
+                        additionalInfo,
+                        notes,
+                        updatedAt: new Date().toISOString()
+                    };
+                }
+            } else {
+                memoryData.push({
+                    id: Date.now().toString(),
+                    title,
+                    category,
+                    data: encryptedData,
+                    additionalInfo,
+                    notes,
+                    createdAt: new Date().toISOString(),
+                    updatedAt: new Date().toISOString()
+                });
+            }
+            
+            localStorage.setItem('passwordManager_memoryData', JSON.stringify(memoryData));
+            closeMemoryModal();
+            loadMemory();
+            if (currentTab === 'dashboard') loadDashboard();
+            incrementChanges();
+            showToast(currentMemoryEditId ? 'Informazione aggiornata' : 'Informazione aggiunta', 'success');
+        }
+
+        function deleteMemoryEntry(id) {
+            if (settings.confirmDelete && !confirm('Sei sicuro di voler eliminare questa informazione?')) return;
+            
+            let data = JSON.parse(localStorage.getItem('passwordManager_memoryData') || '[]');
+            data = data.filter(e => e.id !== id);
+            
+            localStorage.setItem('passwordManager_memoryData', JSON.stringify(data));
+            loadMemory();
+            if (currentTab === 'dashboard') loadDashboard();
+            incrementChanges();
+            showToast('Informazione eliminata', 'success');
+        }
+
+        function closeMemoryModal() {
+            document.getElementById('addEditMemoryModal').classList.remove('active');
+            clearMemoryModalFields();
+        }
+
+        function clearMemoryModalFields() {
+            document.getElementById('memoryTitle').value = '';
+            const categories = JSON.parse(localStorage.getItem('passwordManager_memoryCategories') || JSON.stringify(DEFAULT_MEMORY_CATEGORIES));
+            if (categories.length > 0) {
+                document.getElementById('memoryCategory').value = categories[0];
+            }
+            document.getElementById('memoryData').value = '';
+            document.getElementById('memoryAdditionalInfo').value = '';
+            document.getElementById('memoryNotes').value = '';
+        }
+
+        // Password generator
+        function generatePassword() {
+            const length = parseInt(document.getElementById('genLength').value);
+            const useUppercase = document.getElementById('genUppercase').checked;
+            const useLowercase = document.getElementById('genLowercase').checked;
+            const useNumbers = document.getElementById('genNumbers').checked;
+            const useSymbols = document.getElementById('genSymbols').checked;
+            
+            let charset = '';
+            if (useUppercase) charset += 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+            if (useLowercase) charset += 'abcdefghijklmnopqrstuvwxyz';
+            if (useNumbers) charset += '0123456789';
+            if (useSymbols) charset += '!@#$%^&*()_+-=[]{}|;:,.<>?';
+            
+            if (!charset) {
+                showToast('Seleziona almeno un tipo di carattere', 'error');
+                return '';
+            }
+            
+            let password = '';
+            const array = new Uint32Array(length);
+            crypto.getRandomValues(array);
+            
+            for (let i = 0; i < length; i++) {
+                password += charset[array[i] % charset.length];
+            }
+            
+            return password;
+        }
+
+        function generateAndFillPassword() {
+            const password = generatePassword();
+            if (password) {
+                document.getElementById('entryPassword').value = password;
+                document.getElementById('generatedPasswordDisplay').textContent = password;
+                document.getElementById('generatedPasswordDisplay').style.display = 'block';
+                checkPasswordStrength();
+            }
+        }
+
+        // Check password strength
+        function checkPasswordStrength() {
+            const password = document.getElementById('entryPassword').value;
+            const bar = document.getElementById('strengthBar');
+            
+            if (!settings.showPasswordStrength) {
+                bar.parentElement.style.display = 'none';
+                return;
+            }
+            
+            bar.parentElement.style.display = 'block';
+            
+            if (!password) {
+                bar.className = 'password-strength-bar';
+                return;
+            }
+            
+            let strength = 0;
+            if (password.length >= 8) strength++;
+            if (password.length >= 12) strength++;
+            if (/[a-z]/.test(password) && /[A-Z]/.test(password)) strength++;
+            if (/[0-9]/.test(password)) strength++;
+            if (/[^a-zA-Z0-9]/.test(password)) strength++;
+            
+            if (strength <= 2) {
+                bar.className = 'password-strength-bar strength-weak';
+            } else if (strength <= 4) {
+                bar.className = 'password-strength-bar strength-medium';
+            } else {
+                bar.className = 'password-strength-bar strength-strong';
+            }
+        }
+
+        // Settings Management
+        function showSettings() {
+            document.getElementById('inactivityTimeout').value = settings.inactivityTimeout;
+            document.getElementById('autoHideDelay').value = settings.autoHideDelay;
+            document.getElementById('clipboardClearDelay').value = settings.clipboardClearDelay;
+            document.getElementById('showPasswordStrength').checked = settings.showPasswordStrength;
+            document.getElementById('confirmDelete').checked = settings.confirmDelete;
+            document.getElementById('backupReminder').checked = settings.backupReminder;
+            document.getElementById('backupReminderThreshold').value = settings.backupReminderThreshold;
+            
+            // Show/hide threshold setting based on reminder checkbox
+            toggleBackupThreshold();
+            
+            document.getElementById('settingsModal').classList.add('active');
+        }
+
+        function toggleBackupThreshold() {
+            const isEnabled = document.getElementById('backupReminder').checked;
+            const thresholdGroup = document.getElementById('backupThresholdGroup');
+            thresholdGroup.style.display = isEnabled ? 'block' : 'none';
+        }
+
+        function closeSettings() {
+            document.getElementById('settingsModal').classList.remove('active');
+        }
+
+        function showInstructions() {
+            document.getElementById('instructionsModal').classList.add('active');
+            document.body.classList.add('modal-open');
+        }
+
+        function closeInstructions() {
+            document.getElementById('instructionsModal').classList.remove('active');
+            document.body.classList.remove('modal-open');
+        }
+
+        function saveSettings() {
+            settings.inactivityTimeout = parseInt(document.getElementById('inactivityTimeout').value);
+            settings.autoHideDelay = parseInt(document.getElementById('autoHideDelay').value);
+            settings.clipboardClearDelay = parseInt(document.getElementById('clipboardClearDelay').value);
+            settings.showPasswordStrength = document.getElementById('showPasswordStrength').checked;
+            settings.confirmDelete = document.getElementById('confirmDelete').checked;
+            settings.backupReminder = document.getElementById('backupReminder').checked;
+            settings.backupReminderThreshold = parseInt(document.getElementById('backupReminderThreshold').value);
+            
+            localStorage.setItem('passwordManager_settings', JSON.stringify(settings));
+            
+            // Reset inactivity timer with new timeout
+            resetInactivityTimer();
+            
+            // Show/hide threshold setting
+            toggleBackupThreshold();
+            
+            showToast('Impostazioni salvate', 'success');
+        }
+
+        async function changePassword() {
+            // Load current security question if exists
+            const currentQuestion = localStorage.getItem('passwordManager_securityQuestion') || '';
+            document.getElementById('newSecurityQuestion').value = currentQuestion;
+            
+            // Clear password fields
+            document.getElementById('currentPasswordInput').value = '';
+            document.getElementById('newPasswordInput').value = '';
+            document.getElementById('confirmNewPasswordInput').value = '';
+            
+            // Show modal
+            document.getElementById('changePasswordModal').classList.add('active');
+        }
+
+        function closeChangePasswordModal() {
+            document.getElementById('changePasswordModal').classList.remove('active');
+        }
+
+        async function confirmChangePassword() {
+            const currentPassword = document.getElementById('currentPasswordInput').value;
+            const newPassword = document.getElementById('newPasswordInput').value;
+            const confirmPassword = document.getElementById('confirmNewPasswordInput').value;
+            const securityQuestion = document.getElementById('newSecurityQuestion').value.trim();
+            
+            if (!currentPassword) {
+                showToast('❌ Inserisci la password attuale', 'error');
+                return;
+            }
+            
+            if (!newPassword || newPassword.length < 8) {
+                showToast('❌ La nuova password deve essere di almeno 8 caratteri', 'error');
+                return;
+            }
+            
+            if (newPassword !== confirmPassword) {
+                showToast('❌ Le password non coincidono', 'error');
+                return;
+            }
+            
+            // Verify current password
+            try {
+                const saltStr = localStorage.getItem('passwordManager_salt');
+                const salt = Uint8Array.from(atob(saltStr), c => c.charCodeAt(0));
+                const testKey = await deriveKey(currentPassword, salt);
+                
+                // Try to decrypt some data to verify
+                const data = JSON.parse(localStorage.getItem('passwordManager_data') || '[]');
+                if (data.length > 0) {
+                    await decrypt(data[0].password, testKey);
+                }
+            } catch (e) {
+                showToast('❌ Password attuale errata', 'error');
+                return;
+            }
+            
+            try {
+                // Decrypt all data with old key
+                const passwordData = JSON.parse(localStorage.getItem('passwordManager_data') || '[]');
+                const memoryData = JSON.parse(localStorage.getItem('passwordManager_memoryData') || '[]');
+                
+                const decryptedPasswords = [];
+                for (const entry of passwordData) {
+                    decryptedPasswords.push({
+                        ...entry,
+                        password: await decrypt(entry.password, masterKey)
+                    });
+                }
+                
+                const decryptedMemory = [];
+                for (const entry of memoryData) {
+                    decryptedMemory.push({
+                        ...entry,
+                        data: await decrypt(entry.data, masterKey)
+                    });
+                }
+                
+                // Create new salt and key
+                const newSalt = crypto.getRandomValues(new Uint8Array(16));
+                const newKey = await deriveKey(newPassword, newSalt);
+                
+                // Re-encrypt all data with new key
+                for (const entry of decryptedPasswords) {
+                    entry.password = await encrypt(entry.password, newKey);
+                }
+                
+                for (const entry of decryptedMemory) {
+                    entry.data = await encrypt(entry.data, newKey);
+                }
+                
+                // Save new salt and data
+                localStorage.setItem('passwordManager_salt', btoa(String.fromCharCode(...newSalt)));
+                localStorage.setItem('passwordManager_data', JSON.stringify(decryptedPasswords));
+                localStorage.setItem('passwordManager_memoryData', JSON.stringify(decryptedMemory));
+                
+                // Save security question
+                if (securityQuestion) {
+                    localStorage.setItem('passwordManager_securityQuestion', securityQuestion);
+                } else {
+                    localStorage.removeItem('passwordManager_securityQuestion');
+                }
+                
+                masterKey = newKey;
+                
+                closeChangePasswordModal();
+                closeSettings();
+                showToast('✅ Password master cambiata con successo!', 'success');
+                
+                // Suggest making a backup with new password
+                setTimeout(() => {
+                    if (confirm('⚠️ IMPORTANTE: Hai cambiato la password master!\n\nI tuoi backup precedenti NON funzionano più con questa password.\n\n💾 Vuoi fare un backup ADESSO con la nuova password?')) {
+                        showExportModal();
+                    }
+                }, 1500);
+            } catch (e) {
+                showToast('❌ Errore durante il cambio password: ' + e.message, 'error');
+            }
+        }
+
+        function deleteAllData() {
+            if (!confirm('🗑️ ELIMINA TUTTI I DATI\n\nQuesta operazione cancellerà:\n• Tutte le password e informazioni\n• Le categorie personalizzate\n\nMANTIENE:\n• La password master attuale\n• Le impostazioni\n\n⚠️ IMPORTANTE: Se in futuro vorrai importare un backup fatto con una password master DIVERSA da quella attuale, NON funzionerà. Dovrai prima fare un Reset Completo.\n\nContinuare?')) {
+                return;
+            }
+            
+            const confirmation = prompt('Digita "ELIMINA TUTTO" per confermare:');
+            if (confirmation !== 'ELIMINA TUTTO') {
+                showToast('Operazione annullata', 'error');
+                return;
+            }
+            
+            // Delete only data, not the master password setup
+            localStorage.removeItem('passwordManager_data');
+            localStorage.removeItem('passwordManager_memoryData');
+            localStorage.setItem('passwordManager_changesSinceBackup', '0');
+            
+            // Reset to default categories
+            localStorage.setItem('passwordManager_categories', JSON.stringify(DEFAULT_PASSWORD_CATEGORIES));
+            localStorage.setItem('passwordManager_memoryCategories', JSON.stringify(DEFAULT_MEMORY_CATEGORIES));
+            
+            closeSettings();
+            
+            // Reload the app to show empty state
+            loadCategories();
+            loadMemoryCategories();
+            loadPasswords();
+            loadMemory();
+            loadDashboard();
+            
+            showToast('✅ Tutti i dati sono stati eliminati. La password master rimane attiva.', 'success');
+        }
+
+        function resetApp() {
+            if (!confirm('💥 RESET COMPLETO DELL\'APP\n\n⚠️ Questa operazione eliminerà TUTTO:\n• Tutte le password e informazioni\n• La password master\n• Tutte le impostazioni\n• Tutte le categorie personalizzate\n\nL\'app tornerà come appena installata.\n\n📌 NOTA: Dopo il reset potrai importare un backup, ma dovrai usare la password master di quel backup.\n\nSei ASSOLUTAMENTE SICURO?')) {
+                return;
+            }
+            
+            const confirmation = prompt('Digita "RESET COMPLETO" per confermare:');
+            if (confirmation !== 'RESET COMPLETO') {
+                showToast('Operazione annullata', 'error');
+                return;
+            }
+            
+            // Delete EVERYTHING
+            localStorage.removeItem('passwordManager_salt');
+            localStorage.removeItem('passwordManager_initialized');
+            localStorage.removeItem('passwordManager_data');
+            localStorage.removeItem('passwordManager_memoryData');
+            localStorage.removeItem('passwordManager_categories');
+            localStorage.removeItem('passwordManager_memoryCategories');
+            localStorage.removeItem('passwordManager_settings');
+            localStorage.removeItem('passwordManager_changesSinceBackup');
+            localStorage.removeItem('passwordManager_lastBackup');
+            
+            closeSettings();
+            logout();
+            showToast('💥 App resettata completamente. Configura nuovamente la password master.', 'success');
+        }
+
+        // Backup Reminder Functions
+        function checkBackupReminder() {
+            if (!settings.backupReminder) return;
+            
+            const lastBackup = localStorage.getItem('passwordManager_lastBackup');
+            const changesSinceBackup = parseInt(localStorage.getItem('passwordManager_changesSinceBackup') || '0');
+            
+            // Show reminder if changes reach the threshold
+            if (changesSinceBackup >= settings.backupReminderThreshold) {
+                document.getElementById('backupReminderModal').classList.add('active');
+            }
+        }
+
+        function incrementChanges() {
+            const changes = parseInt(localStorage.getItem('passwordManager_changesSinceBackup') || '0');
+            localStorage.setItem('passwordManager_changesSinceBackup', (changes + 1).toString());
+            
+            // Check if we should show backup reminder
+            setTimeout(checkBackupReminder, 500);
+        }
+
+        function backupNow() {
+            document.getElementById('backupReminderModal').classList.remove('active');
+            showExportModal();
+        }
+
+        function remindLater() {
+            document.getElementById('backupReminderModal').classList.remove('active');
+            // Reset counter to show reminder after threshold more changes
+            localStorage.setItem('passwordManager_changesSinceBackup', '0');
+        }
+
+        function dontRemind() {
+            document.getElementById('backupReminderModal').classList.remove('active');
+            // Disable backup reminder
+            settings.backupReminder = false;
+            localStorage.setItem('passwordManager_settings', JSON.stringify(settings));
+            showToast('Promemoria backup disabilitato. Puoi riattivarlo nelle impostazioni.', 'success');
+        }
+
+        // Export data
+        function showExportModal() {
+            document.getElementById('exportModal').classList.add('active');
+        }
+
+        function closeExportModal() {
+            document.getElementById('exportModal').classList.remove('active');
+        }
+
+        function exportData() {
+            const passwordData = localStorage.getItem('passwordManager_data');
+            const memoryData = localStorage.getItem('passwordManager_memoryData');
+            const salt = localStorage.getItem('passwordManager_salt');
+            const passwordCategories = localStorage.getItem('passwordManager_categories');
+            const memoryCategories = localStorage.getItem('passwordManager_memoryCategories');
+            const securityQuestion = localStorage.getItem('passwordManager_securityQuestion');
+            
+            const exportObj = {
+                version: '2.0',
+                exportDate: new Date().toISOString(),
+                salt: salt,
+                passwordData: JSON.parse(passwordData),
+                memoryData: JSON.parse(memoryData),
+                passwordCategories: JSON.parse(passwordCategories),
+                memoryCategories: JSON.parse(memoryCategories)
+            };
+            
+            // Add security question if it exists
+            if (securityQuestion) {
+                exportObj.passwordHint = securityQuestion;
+            }
+            
+            const blob = new Blob([JSON.stringify(exportObj, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `password-backup-${new Date().toISOString().split('T')[0]}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+            
+            closeExportModal();
+            
+            // Reset changes counter and update last backup time
+            localStorage.setItem('passwordManager_changesSinceBackup', '0');
+            localStorage.setItem('passwordManager_lastBackup', new Date().toISOString());
+            
+            showToast('Backup scaricato', 'success');
+        }
+
+        // Import data
+        function showImportModal() {
+            document.getElementById('importModal').classList.add('active');
+        }
+
+        function closeImportModal() {
+            document.getElementById('importModal').classList.remove('active');
+            document.getElementById('importFile').value = '';
+            document.getElementById('importFileName').style.display = 'none';
+            document.getElementById('importPasswordHint').style.display = 'none';
+            document.getElementById('importFileLabel').textContent = '📁 Scegli file di backup';
+            document.getElementById('importButton').disabled = true;
+            document.getElementById('importButton').style.opacity = '0.5';
+        }
+
+        function updateImportFileName() {
+            const fileInput = document.getElementById('importFile');
+            const fileNameDisplay = document.getElementById('importFileName');
+            const fileNameText = document.getElementById('importFileNameText');
+            const importButton = document.getElementById('importButton');
+            const fileLabel = document.getElementById('importFileLabel');
+            const hintDisplay = document.getElementById('importPasswordHint');
+            const hintText = document.getElementById('importPasswordHintText');
+            
+            if (fileInput.files.length > 0) {
+                const fileName = fileInput.files[0].name;
+                fileNameText.textContent = `✅ File selezionato: ${fileName}`;
+                fileNameDisplay.style.display = 'block';
+                fileLabel.textContent = '📁 Cambia file';
+                importButton.disabled = false;
+                importButton.style.opacity = '1';
+                
+                // Try to read the file and extract password hint
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    try {
+                        const backupData = JSON.parse(e.target.result);
+                        if (backupData.passwordHint) {
+                            hintText.textContent = backupData.passwordHint;
+                            hintDisplay.style.display = 'block';
+                        } else {
+                            hintDisplay.style.display = 'none';
+                        }
+                    } catch (err) {
+                        hintDisplay.style.display = 'none';
+                    }
+                };
+                reader.readAsText(fileInput.files[0]);
+            } else {
+                fileNameDisplay.style.display = 'none';
+                hintDisplay.style.display = 'none';
+                fileLabel.textContent = '📁 Scegli file di backup';
+                importButton.disabled = true;
+                importButton.style.opacity = '0.5';
+            }
+        }
+
+        function importData() {
+            const fileInput = document.getElementById('importFile');
+            
+            if (!fileInput.files.length) {
+                showToast('Seleziona un file', 'error');
+                return;
+            }
+            
+            const file = fileInput.files[0];
+            const reader = new FileReader();
+            
+            reader.onload = function(e) {
+                try {
+                    const importObj = JSON.parse(e.target.result);
+                    
+                    if (!importObj.version || !importObj.salt) {
+                        throw new Error('Formato file non valido');
+                    }
+                    
+                    if (!confirm('⚠️ CONFERMA IMPORTAZIONE\n\nQuesto sostituirà tutti i dati attuali e la password master.\n\nDopo l\'importazione dovrai riloggare con la password del backup.\n\nContinuare?')) {
+                        closeImportModal();
+                        return;
+                    }
+                    
+                    localStorage.setItem('passwordManager_salt', importObj.salt);
+                    
+                    // Handle version 2.0 (with memory data)
+                    if (importObj.version === '2.0') {
+                        localStorage.setItem('passwordManager_data', JSON.stringify(importObj.passwordData || []));
+                        localStorage.setItem('passwordManager_memoryData', JSON.stringify(importObj.memoryData || []));
+                        
+                        // Handle categories - check if they exist in import
+                        if (importObj.passwordCategories) {
+                            localStorage.setItem('passwordManager_categories', JSON.stringify(importObj.passwordCategories));
+                        } else {
+                            localStorage.setItem('passwordManager_categories', JSON.stringify(DEFAULT_PASSWORD_CATEGORIES));
+                        }
+                        
+                        if (importObj.memoryCategories) {
+                            localStorage.setItem('passwordManager_memoryCategories', JSON.stringify(importObj.memoryCategories));
+                        } else {
+                            localStorage.setItem('passwordManager_memoryCategories', JSON.stringify(DEFAULT_MEMORY_CATEGORIES));
+                        }
+                        
+                        // Import security question if exists
+                        if (importObj.passwordHint) {
+                            localStorage.setItem('passwordManager_securityQuestion', importObj.passwordHint);
+                        } else {
+                            localStorage.removeItem('passwordManager_securityQuestion');
+                        }
+                    } 
+                    // Handle version 1.0 (old format, only passwords)
+                    else if (importObj.version === '1.0') {
+                        localStorage.setItem('passwordManager_data', JSON.stringify(importObj.data || []));
+                        localStorage.setItem('passwordManager_memoryData', JSON.stringify([]));
+                        localStorage.setItem('passwordManager_categories', JSON.stringify(DEFAULT_PASSWORD_CATEGORIES));
+                        localStorage.setItem('passwordManager_memoryCategories', JSON.stringify(DEFAULT_MEMORY_CATEGORIES));
+                    } else {
+                        throw new Error('Versione file non supportata: ' + importObj.version);
+                    }
+                    
+                    // Reset backup counter
+                    localStorage.setItem('passwordManager_changesSinceBackup', '0');
+                    localStorage.setItem('passwordManager_lastBackup', new Date().toISOString());
+                    
+                    closeImportModal();
+                    
+                    // Must logout because master password has changed
+                    logout();
+                    
+                    showToast('✅ Importazione completata! Accedi con la password master del backup.', 'success');
+                } catch (e) {
+                    console.error('Import error:', e);
+                    showToast('❌ Errore durante l\'importazione: ' + e.message, 'error');
+                    closeImportModal();
+                }
+            };
+            
+            reader.onerror = function() {
+                showToast('❌ Errore nella lettura del file', 'error');
+                closeImportModal();
+            };
+            
+            reader.readAsText(file);
+        }
+
+        // Modal functions
+        function closeModal() {
+            document.getElementById('addEditModal').classList.remove('active');
+            clearModalFields();
+        }
+
+        function clearModalFields() {
+            document.getElementById('entryTitle').value = '';
+            const categories = JSON.parse(localStorage.getItem('passwordManager_categories') || JSON.stringify(DEFAULT_PASSWORD_CATEGORIES));
+            if (categories.length > 0) {
+                document.getElementById('entryCategory').value = categories[0];
+            }
+            document.getElementById('entryUsername').value = '';
+            document.getElementById('entryEmail').value = '';
+            document.getElementById('entryPassword').value = '';
+            document.getElementById('entryUrl').value = '';
+            document.getElementById('entryNotes').value = '';
+            document.getElementById('generatedPasswordDisplay').style.display = 'none';
+            document.getElementById('strengthBar').className = 'password-strength-bar';
+        }
+
+        // Toast notification
+        function showToast(message, type = 'success') {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.className = `toast ${type} show`;
+            
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 3000);
+        }
+
+        // Utility function
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Close modals on outside click
+        document.getElementById('addEditModal').addEventListener('click', function(e) {
+            if (e.target === this) closeModal();
+        });
+
+        document.getElementById('exportModal').addEventListener('click', function(e) {
+            if (e.target === this) closeExportModal();
+        });
+
+        document.getElementById('importModal').addEventListener('click', function(e) {
+            if (e.target === this) closeImportModal();
+        });
+
+        document.getElementById('categoryModal').addEventListener('click', function(e) {
+            if (e.target === this) closeCategoryModal();
+        });
+
+        document.getElementById('addEditMemoryModal').addEventListener('click', function(e) {
+            if (e.target === this) closeMemoryModal();
+        });
+
+        document.getElementById('settingsModal').addEventListener('click', function(e) {
+            if (e.target === this) closeSettings();
+        });
+
+        document.getElementById('backupReminderModal').addEventListener('click', function(e) {
+            if (e.target === this) remindLater();
+        });
+
+        document.getElementById('changePasswordModal').addEventListener('click', function(e) {
+            if (e.target === this) closeChangePasswordModal();
+        });
+
+        document.getElementById('instructionsModal').addEventListener('click', function(e) {
+            if (e.target === this) closeInstructions();
+        });
+
+        // Enter key to login
+        document.getElementById('masterPassword').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') login();
+        });
+
+        // Enter key for setup
+        document.getElementById('setupPassword').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') document.getElementById('setupPasswordConfirm').focus();
+        });
+
+        document.getElementById('setupPasswordConfirm').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') completeSetup();
+        });
+
+        // Enter key for adding categories
+        document.getElementById('newCategoryName').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') addCategory();
+        });
+    </script>
+
+    <!-- Service Worker Registration -->
+    <script>
+        // Register Service Worker for PWA functionality
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./service-worker.js')
+                    .then((registration) => {
+                        console.log('✅ Service Worker registered successfully:', registration.scope);
+                        
+                        // Check for updates
+                        registration.addEventListener('updatefound', () => {
+                            const newWorker = registration.installing;
+                            newWorker.addEventListener('statechange', () => {
+                                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                                    console.log('🔄 New version available! Reload to update.');
+                                    // Optional: Show update notification to user
+                                    if (confirm('Nuova versione disponibile! Ricaricare per aggiornare?')) {
+                                        newWorker.postMessage({ type: 'SKIP_WAITING' });
+                                        window.location.reload();
+                                    }
+                                }
+                            });
+                        });
+                    })
+                    .catch((error) => {
+                        console.error('❌ Service Worker registration failed:', error);
+                    });
+            });
+
+            // Reload page when new service worker takes control
+            let refreshing = false;
+            navigator.serviceWorker.addEventListener('controllerchange', () => {
+                if (!refreshing) {
+                    refreshing = true;
+                    window.location.reload();
+                }
+            });
+        } else {
+            console.warn('⚠️ Service Workers not supported in this browser');
+        }
+
+        // Install prompt for PWA
+        let deferredPrompt;
+        window.addEventListener('beforeinstallprompt', (e) => {
+            // Prevent the mini-infobar from appearing on mobile
+            e.preventDefault();
+            // Stash the event so it can be triggered later
+            deferredPrompt = e;
+            console.log('💾 PWA install prompt available');
+            
+            // Optional: Show custom install button
+            // You can add a button in the UI to trigger installation
+        });
+
+        window.addEventListener('appinstalled', () => {
+            console.log('✅ PWA installed successfully!');
+            deferredPrompt = null;
+        });
+    </script>
+</body>
+</html>
