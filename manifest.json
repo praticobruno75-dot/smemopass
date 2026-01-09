@@ -1,26 +1,39 @@
 {
-  "name": "SMEMOPASS",
+  "name": "SMEMOPASS - Gestore Password Sicuro",
   "short_name": "SMEMOPASS",
-  "description": "Gestore password sicuro e offline con crittografia AES-256",
-  "start_url": "./",
-  "scope": "./",
+  "description": "Gestore password sicuro e offline con crittografia AES-256. Tutti i tuoi dati protetti localmente sul tuo dispositivo.",
+  "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#667eea",
   "theme_color": "#667eea",
-  "orientation": "portrait",
-  "prefer_related_applications": false,
+  "orientation": "portrait-primary",
+  "scope": "./",
   "icons": [
     {
-      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><defs><linearGradient id='g' x1='0%' y1='0%' x2='100%' y2='100%'><stop offset='0%' style='stop-color:%23667eea;stop-opacity:1' /><stop offset='100%' style='stop-color:%23764ba2;stop-opacity:1' /></linearGradient></defs><rect width='192' height='192' rx='40' fill='url(%23g)'/><path d='M96 48 L96 67 M67 86 L125 86 M58 86 L58 144 Q58 153 67 153 L125 153 Q134 153 134 144 L134 86 M76 96 L76 134 M96 96 L96 134 L116 96 L116 134' stroke='white' stroke-width='7' fill='none' stroke-linecap='round'/><circle cx='96' cy='57' r='15' fill='white'/></svg>",
-      "type": "image/svg+xml",
+      "src": "./icons/icon-192.png",
+      "type": "image/png",
       "sizes": "192x192",
       "purpose": "any maskable"
     },
     {
-      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><defs><linearGradient id='g2' x1='0%' y1='0%' x2='100%' y2='100%'><stop offset='0%' style='stop-color:%23667eea;stop-opacity:1' /><stop offset='100%' style='stop-color:%23764ba2;stop-opacity:1' /></linearGradient></defs><rect width='512' height='512' rx='100' fill='url(%23g2)'/><path d='M256 128 L256 179 M179 230 L333 230 M154 230 L154 384 Q154 409 179 409 L333 409 Q358 409 358 384 L358 230 M205 256 L205 358 M256 256 L256 358 L307 256 L307 358' stroke='white' stroke-width='20' fill='none' stroke-linecap='round'/><circle cx='256' cy='153' r='40' fill='white'/></svg>",
-      "type": "image/svg+xml",
+      "src": "./icons/icon-512.png",
+      "type": "image/png",
       "sizes": "512x512",
       "purpose": "any maskable"
+    },
+    {
+      "src": "./icons/apple-touch-icon.png",
+      "type": "image/png",
+      "sizes": "180x180"
+    }
+  ],
+  "categories": ["productivity", "utilities", "security"],
+  "screenshots": [
+    {
+      "src": "./icons/icon-512.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "form_factor": "narrow"
     }
   ]
 }

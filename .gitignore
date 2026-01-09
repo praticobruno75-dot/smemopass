@@ -1,8 +1,8 @@
-# System files
+# Operating System
 .DS_Store
 Thumbs.db
 
-# Editor files
+# Editors
 .vscode/
 .idea/
 *.swp
@@ -11,6 +11,9 @@ Thumbs.db
 
 # Logs
 *.log
+npm-debug.log*
 
 # Temporary files
 *.tmp
+*.bak
+*.cache
