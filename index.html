@@ -33,30 +33,28 @@
 
         html {
             overscroll-behavior-y: none;
+            height: 100%;
         }
 
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
+            height: 100%;
             display: flex;
             justify-content: center;
             align-items: center;
             padding: 20px;
             overscroll-behavior-y: none;
+            overflow: hidden;
         }
 
         /* Fix for PWA standalone mode */
         @media all and (display-mode: standalone) {
             html, body {
                 overscroll-behavior: none;
-                overflow: auto;
+                overflow: hidden;
                 height: 100%;
                 position: relative;
-            }
-            
-            body {
-                overflow-y: auto;
             }
         }
 
@@ -79,7 +77,11 @@
             box-shadow: 0 20px 60px rgba(0,0,0,0.3);
             max-width: 900px;
             width: 100%;
+            height: 100%;
+            max-height: 100%;
             overflow: hidden;
+            display: flex;
+            flex-direction: column;
         }
 
         .login-screen {
@@ -174,6 +176,12 @@
 
         .main-app {
             display: none;
+            flex-direction: column;
+            height: 100%;
+        }
+
+        .main-app.active {
+            display: flex;
         }
 
         .header {
@@ -196,6 +204,9 @@
 
         .content {
             padding: 30px;
+            flex: 1;
+            overflow-y: auto;
+            overflow-x: hidden;
         }
 
         .toolbar {
@@ -675,18 +686,24 @@
             /* Prevent pull-to-refresh - SIMPLE */
             html, body {
                 overscroll-behavior-y: none !important;
+                height: 100% !important;
+                overflow: hidden !important;
+            }
+
+            .container {
+                height: 100% !important;
+                max-height: 100% !important;
+            }
+
+            .content {
+                overflow-y: auto !important;
+                -webkit-overflow-scrolling: touch !important;
             }
 
             /* Additional fix for PWA standalone mode on Android */
             @media all and (display-mode: standalone) {
-                html {
-                    overflow-y: auto !important;
-                    height: 100% !important;
-                }
-                
-                body {
-                    overflow-y: auto !important;
-                    min-height: 100% !important;
+                html, body {
+                    overflow: hidden !important;
                 }
             }
         }
@@ -2049,7 +2066,7 @@
                 }
                 
                 document.getElementById('loginScreen').style.display = 'none';
-                document.getElementById('mainApp').style.display = 'block';
+                document.getElementById('mainApp').classList.add('active');
                 document.getElementById('masterPassword').value = '';
                 
                 loadCategories();
@@ -2071,7 +2088,7 @@
             currentMemoryEditId = null;
             clearTimeout(inactivityTimer);
             
-            document.getElementById('mainApp').style.display = 'none';
+            document.getElementById('mainApp').classList.remove('active');
             document.getElementById('loginScreen').style.display = 'block';
             document.getElementById('passwordList').innerHTML = '';
             document.getElementById('memoryList').innerHTML = '';

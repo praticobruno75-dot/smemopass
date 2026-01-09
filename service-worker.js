@@ -1,7 +1,7 @@
 // SMEMOPASS Service Worker
-// Version 5.0.0 - PWA Standalone Fix
+// Version 6.0.0 - Fixed Layout Scroll
 
-const CACHE_NAME = 'smemopass-v5';
+const CACHE_NAME = 'smemopass-v6';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
