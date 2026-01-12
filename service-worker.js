@@ -1,7 +1,7 @@
 // SMEMOPASS Service Worker
-// Version 9.0.0 - Fixed quotes in data attributes
+// Version 10.0.0 - Fixed quotes with memory cache
 
-const CACHE_NAME = 'smemopass-v9';
+const CACHE_NAME = 'smemopass-v10';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',

@@ -2564,6 +2564,10 @@
             }
         }
 
+        // Store decrypted passwords in memory (fixes quotes issue)
+        const passwordCache = new Map();
+        const memoryCache = new Map();
+
         // Create password card
         async function createPasswordCard(entry) {
             const card = document.createElement('div');
@@ -2573,6 +2577,9 @@
             card.dataset.searchtext = `${entry.title} ${entry.username || ''} ${entry.email || ''} ${entry.url || ''}`.toLowerCase();
             
             const decryptedPassword = await decrypt(entry.password, masterKey);
+            
+            // Store password in memory cache instead of HTML
+            passwordCache.set(entry.id, decryptedPassword);
             
             // Format date
             const updatedDate = new Date(entry.updatedAt || entry.createdAt);
@@ -2602,8 +2609,8 @@
                     </div>
                 </div>
                 <div class="password-card-actions">
-                    <button class="icon-btn btn-copy" data-password="${decryptedPassword}" onclick="copyPasswordFromButton(this, '${entry.id}')">📋 Copia</button>
-                    <button class="icon-btn btn-show" data-password="${decryptedPassword}" onclick="togglePasswordFromButton(this, '${entry.id}')">👁️ Mostra</button>
+                    <button class="icon-btn btn-copy" onclick="copyPasswordById('${entry.id}')">📋 Copia</button>
+                    <button class="icon-btn btn-show" onclick="togglePasswordById('${entry.id}')">👁️ Mostra</button>
                     <button class="icon-btn btn-edit" onclick="editEntry('${entry.id}')">✏️ Modifica</button>
                     <button class="icon-btn btn-delete" onclick="deleteEntry('${entry.id}')">🗑️ Elimina</button>
                 </div>
@@ -2641,15 +2648,28 @@
             }
         }
 
-        // New functions that read from button data attribute (fixes quotes bug)
+        // New functions that use memory cache (fixes quotes bug completely)
+        function togglePasswordById(id) {
+            const password = passwordCache.get(id);
+            if (password) {
+                togglePassword(id, password);
+            }
+        }
+
+        function copyPasswordById(id) {
+            const password = passwordCache.get(id);
+            if (password) {
+                copyPassword(id, password);
+            }
+        }
+
+        // Legacy wrapper functions (redirect to new functions)
         function togglePasswordFromButton(button, id) {
-            const password = button.dataset.password;
-            togglePassword(id, password);
+            togglePasswordById(id);
         }
 
         function copyPasswordFromButton(button, id) {
-            const password = button.dataset.password;
-            copyPassword(id, password);
+            copyPasswordById(id);
         }
 
         // Helper function to reset modal scroll
@@ -2818,6 +2838,9 @@
             
             const decryptedData = await decrypt(entry.data, masterKey);
             
+            // Store data in memory cache
+            memoryCache.set(entry.id, decryptedData);
+            
             // Format date
             const updatedDate = new Date(entry.updatedAt || entry.createdAt);
             const formattedDate = updatedDate.toLocaleDateString('it-IT', { 
@@ -2844,8 +2867,8 @@
                     </div>
                 </div>
                 <div class="password-card-actions">
-                    <button class="icon-btn btn-copy" data-memdata="${decryptedData}" onclick="copyMemoryDataFromButton(this, '${entry.id}')">📋 Copia</button>
-                    <button class="icon-btn btn-show" data-memdata="${decryptedData}" onclick="toggleMemoryDataFromButton(this, '${entry.id}')">👁️ Mostra</button>
+                    <button class="icon-btn btn-copy" onclick="copyMemoryDataById('${entry.id}')">📋 Copia</button>
+                    <button class="icon-btn btn-show" onclick="toggleMemoryDataById('${entry.id}')">👁️ Mostra</button>
                     <button class="icon-btn btn-edit" onclick="editMemoryEntry('${entry.id}')">✏️ Modifica</button>
                     <button class="icon-btn btn-delete" onclick="deleteMemoryEntry('${entry.id}')">🗑️ Elimina</button>
                 </div>
@@ -2881,15 +2904,28 @@
             }
         }
 
-        // New wrapper functions for memory (fixes quotes bug)
+        // New functions that use memory cache (fixes quotes bug)
+        function toggleMemoryDataById(id) {
+            const data = memoryCache.get(id);
+            if (data) {
+                toggleMemoryData(id, data);
+            }
+        }
+
+        function copyMemoryDataById(id) {
+            const data = memoryCache.get(id);
+            if (data) {
+                copyMemoryData(id, data);
+            }
+        }
+
+        // Legacy wrapper functions (redirect to new functions)
         function toggleMemoryDataFromButton(button, id) {
-            const data = button.dataset.memdata;
-            toggleMemoryData(id, data);
+            toggleMemoryDataById(id);
         }
 
         function copyMemoryDataFromButton(button, id) {
-            const data = button.dataset.memdata;
-            copyMemoryData(id, data);
+            copyMemoryDataById(id);
         }
 
         async function copyMemoryData(id, data) {
