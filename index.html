@@ -2602,8 +2602,8 @@
                     </div>
                 </div>
                 <div class="password-card-actions">
-                    <button class="icon-btn btn-copy" data-password="${escapeHtml(decryptedPassword)}" onclick="copyPasswordFromButton(this, '${entry.id}')">📋 Copia</button>
-                    <button class="icon-btn btn-show" data-password="${escapeHtml(decryptedPassword)}" onclick="togglePasswordFromButton(this, '${entry.id}')">👁️ Mostra</button>
+                    <button class="icon-btn btn-copy" data-password="${decryptedPassword}" onclick="copyPasswordFromButton(this, '${entry.id}')">📋 Copia</button>
+                    <button class="icon-btn btn-show" data-password="${decryptedPassword}" onclick="togglePasswordFromButton(this, '${entry.id}')">👁️ Mostra</button>
                     <button class="icon-btn btn-edit" onclick="editEntry('${entry.id}')">✏️ Modifica</button>
                     <button class="icon-btn btn-delete" onclick="deleteEntry('${entry.id}')">🗑️ Elimina</button>
                 </div>
@@ -2844,8 +2844,8 @@
                     </div>
                 </div>
                 <div class="password-card-actions">
-                    <button class="icon-btn btn-copy" data-memdata="${escapeHtml(decryptedData)}" onclick="copyMemoryDataFromButton(this, '${entry.id}')">📋 Copia</button>
-                    <button class="icon-btn btn-show" data-memdata="${escapeHtml(decryptedData)}" onclick="toggleMemoryDataFromButton(this, '${entry.id}')">👁️ Mostra</button>
+                    <button class="icon-btn btn-copy" data-memdata="${decryptedData}" onclick="copyMemoryDataFromButton(this, '${entry.id}')">📋 Copia</button>
+                    <button class="icon-btn btn-show" data-memdata="${decryptedData}" onclick="toggleMemoryDataFromButton(this, '${entry.id}')">👁️ Mostra</button>
                     <button class="icon-btn btn-edit" onclick="editMemoryEntry('${entry.id}')">✏️ Modifica</button>
                     <button class="icon-btn btn-delete" onclick="deleteMemoryEntry('${entry.id}')">🗑️ Elimina</button>
                 </div>
