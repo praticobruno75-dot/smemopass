@@ -1,7 +1,7 @@
 // SMEMOPASS Service Worker
-// Version 6.0.0 - Fixed Layout Scroll
+// Version 8.0.0 - Bug fixes (filter + quotes)
 
-const CACHE_NAME = 'smemopass-v6';
+const CACHE_NAME = 'smemopass-v8';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',

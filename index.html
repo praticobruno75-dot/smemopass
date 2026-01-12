@@ -2,7 +2,7 @@
 <html lang="it">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>SMEMOPASS - Gestore Password Sicuro</title>
     
     <!-- PWA Meta Tags -->
@@ -39,7 +39,7 @@
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            height: 100%;
+            height: 100vh;
             display: flex;
             justify-content: center;
             align-items: center;
@@ -53,7 +53,7 @@
             html, body {
                 overscroll-behavior: none;
                 overflow: hidden;
-                height: 100%;
+                height: 100vh;
                 position: relative;
             }
         }
@@ -78,7 +78,7 @@
             max-width: 900px;
             width: 100%;
             height: 100%;
-            max-height: 100%;
+            max-height: calc(100vh - 40px);
             overflow: hidden;
             display: flex;
             flex-direction: column;
@@ -686,18 +686,43 @@
             /* Prevent pull-to-refresh - SIMPLE */
             html, body {
                 overscroll-behavior-y: none !important;
-                height: 100% !important;
+                height: 100vh !important;
                 overflow: hidden !important;
+            }
+
+            body {
+                padding: 10px !important;
             }
 
             .container {
                 height: 100% !important;
-                max-height: 100% !important;
+                max-height: calc(100vh - 20px) !important;
+                width: 100% !important;
+                max-width: 100% !important;
+                border-radius: 10px !important;
             }
 
             .content {
                 overflow-y: auto !important;
                 -webkit-overflow-scrolling: touch !important;
+            }
+
+            /* iOS-specific fixes */
+            @supports (-webkit-touch-callout: none) {
+                body {
+                    padding: max(10px, env(safe-area-inset-top)) 
+                             max(10px, env(safe-area-inset-right)) 
+                             max(10px, env(safe-area-inset-bottom)) 
+                             max(10px, env(safe-area-inset-left)) !important;
+                }
+                
+                .container {
+                    max-height: calc(100vh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 20px) !important;
+                }
+                
+                .header {
+                    padding-top: max(20px, env(safe-area-inset-top)) !important;
+                }
             }
 
             /* Additional fix for PWA standalone mode on Android */
@@ -2577,8 +2602,8 @@
                     </div>
                 </div>
                 <div class="password-card-actions">
-                    <button class="icon-btn btn-copy" onclick="copyPassword('${entry.id}', '${escapeHtml(decryptedPassword)}')">📋 Copia</button>
-                    <button class="icon-btn btn-show" onclick="togglePassword('${entry.id}', '${escapeHtml(decryptedPassword)}')">👁️ Mostra</button>
+                    <button class="icon-btn btn-copy" data-password="${escapeHtml(decryptedPassword)}" onclick="copyPasswordFromButton(this, '${entry.id}')">📋 Copia</button>
+                    <button class="icon-btn btn-show" data-password="${escapeHtml(decryptedPassword)}" onclick="togglePasswordFromButton(this, '${entry.id}')">👁️ Mostra</button>
                     <button class="icon-btn btn-edit" onclick="editEntry('${entry.id}')">✏️ Modifica</button>
                     <button class="icon-btn btn-delete" onclick="deleteEntry('${entry.id}')">🗑️ Elimina</button>
                 </div>
@@ -2614,6 +2639,17 @@
             } else {
                 span.textContent = '••••••••';
             }
+        }
+
+        // New functions that read from button data attribute (fixes quotes bug)
+        function togglePasswordFromButton(button, id) {
+            const password = button.dataset.password;
+            togglePassword(id, password);
+        }
+
+        function copyPasswordFromButton(button, id) {
+            const password = button.dataset.password;
+            copyPassword(id, password);
         }
 
         // Helper function to reset modal scroll
@@ -2727,6 +2763,7 @@
             localStorage.setItem('passwordManager_data', JSON.stringify(data));
             closeModal();
             loadPasswords();
+            filterPasswords(); // Re-apply the filter after loading
             if (currentTab === 'dashboard') loadDashboard();
             incrementChanges();
             showToast(currentEditId ? 'Password aggiornata' : 'Password aggiunta', 'success');
@@ -2807,8 +2844,8 @@
                     </div>
                 </div>
                 <div class="password-card-actions">
-                    <button class="icon-btn btn-copy" onclick="copyMemoryData('${entry.id}', '${escapeHtml(decryptedData)}')">📋 Copia</button>
-                    <button class="icon-btn btn-show" onclick="toggleMemoryData('${entry.id}', '${escapeHtml(decryptedData)}')">👁️ Mostra</button>
+                    <button class="icon-btn btn-copy" data-memdata="${escapeHtml(decryptedData)}" onclick="copyMemoryDataFromButton(this, '${entry.id}')">📋 Copia</button>
+                    <button class="icon-btn btn-show" data-memdata="${escapeHtml(decryptedData)}" onclick="toggleMemoryDataFromButton(this, '${entry.id}')">👁️ Mostra</button>
                     <button class="icon-btn btn-edit" onclick="editMemoryEntry('${entry.id}')">✏️ Modifica</button>
                     <button class="icon-btn btn-delete" onclick="deleteMemoryEntry('${entry.id}')">🗑️ Elimina</button>
                 </div>
@@ -2842,6 +2879,17 @@
             } else {
                 span.textContent = '••••••••';
             }
+        }
+
+        // New wrapper functions for memory (fixes quotes bug)
+        function toggleMemoryDataFromButton(button, id) {
+            const data = button.dataset.memdata;
+            toggleMemoryData(id, data);
+        }
+
+        function copyMemoryDataFromButton(button, id) {
+            const data = button.dataset.memdata;
+            copyMemoryData(id, data);
         }
 
         async function copyMemoryData(id, data) {
@@ -2930,6 +2978,7 @@
             localStorage.setItem('passwordManager_memoryData', JSON.stringify(memoryData));
             closeMemoryModal();
             loadMemory();
+            filterMemory(); // Re-apply the filter after loading
             if (currentTab === 'dashboard') loadDashboard();
             incrementChanges();
             showToast(currentMemoryEditId ? 'Informazione aggiornata' : 'Informazione aggiunta', 'success');
