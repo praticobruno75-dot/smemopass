@@ -1241,6 +1241,21 @@
             </div>
 
             <div class="input-group">
+                <label for="entryExtra1">Campo Extra 1</label>
+                <input type="text" id="entryExtra1" placeholder="Informazione aggiuntiva 1">
+            </div>
+
+            <div class="input-group">
+                <label for="entryExtra2">Campo Extra 2</label>
+                <input type="text" id="entryExtra2" placeholder="Informazione aggiuntiva 2">
+            </div>
+
+            <div class="input-group">
+                <label for="entryExtra3">Campo Extra 3</label>
+                <input type="text" id="entryExtra3" placeholder="Informazione aggiuntiva 3">
+            </div>
+
+            <div class="input-group">
                 <label for="entryNotes">Note</label>
                 <textarea id="entryNotes" placeholder="Note aggiuntive..."></textarea>
             </div>
@@ -1333,18 +1348,13 @@
 
             <div class="input-group">
                 <label for="memoryCategory">Categoria *</label>
-                <select id="memoryCategory">
+                <select id="memoryCategory" onchange="updateMemoryFields()">
                 </select>
             </div>
 
-            <div class="input-group">
-                <label for="memoryData">Informazione *</label>
-                <input type="text" id="memoryData" placeholder="Inserisci il dato da salvare">
-            </div>
-
-            <div class="input-group">
-                <label for="memoryAdditionalInfo">Informazioni aggiuntive</label>
-                <input type="text" id="memoryAdditionalInfo" placeholder="es. Banca, ente emittente, ecc.">
+            <!-- Dynamic fields container -->
+            <div id="memoryDynamicFields">
+                <!-- Fields will be inserted here based on category -->
             </div>
 
             <div class="input-group">
@@ -1774,7 +1784,7 @@
         const DEFAULT_PASSWORD_CATEGORIES = ['Applicazioni', 'Banking', 'Dispositivi elettronici', 'Email', 'Piattaforme Web', 'Social'];
         
         // Default categories for digital memory
-        const DEFAULT_MEMORY_CATEGORIES = ['Abbonamenti', 'Assicurazioni', 'Dati Bancari', 'Dati Fiscali', 'Documenti Personali', 'Altro'];
+        const DEFAULT_MEMORY_CATEGORIES = ['Carta di Credito', 'Documento', 'Conto Bancario', 'Licenza Software', 'Veicolo', 'Codice Fiscale', 'Altro'];
 
         // Initialize app
         document.addEventListener('DOMContentLoaded', function() {
@@ -1942,6 +1952,106 @@
                 observer.observe(modal, { attributes: true });
             });
         });
+
+        // Memory category templates with specific fields
+        const memoryCategoryTemplates = {
+            'Carta di Credito': {
+                icon: '💳',
+                fields: [
+                    { id: 'numeroCartafield', label: 'Numero Carta *', type: 'text', placeholder: '1234 5678 9012 3456', encrypted: true },
+                    { id: 'intestatario', label: 'Intestatario', type: 'text', placeholder: 'Nome Cognome' },
+                    { id: 'scadenza', label: 'Scadenza', type: 'text', placeholder: 'MM/AAAA' },
+                    { id: 'cvv', label: 'CVV/CVC *', type: 'text', placeholder: '123', encrypted: true },
+                    { id: 'pin', label: 'PIN', type: 'text', placeholder: '1234', encrypted: true },
+                    { id: 'bancaEmittente', label: 'Banca Emittente', type: 'text', placeholder: 'Nome banca' },
+                    { id: 'extra1', label: 'Extra 1', type: 'text', placeholder: 'Info aggiuntiva' },
+                    { id: 'extra2', label: 'Extra 2', type: 'text', placeholder: 'Info aggiuntiva' },
+                    { id: 'extra3', label: 'Extra 3', type: 'text', placeholder: 'Info aggiuntiva' }
+                ]
+            },
+            'Documento': {
+                icon: '🪪',
+                fields: [
+                    { id: 'numeroDocumento', label: 'Numero Documento *', type: 'text', placeholder: 'AB1234567', encrypted: true },
+                    { id: 'nomeCompleto', label: 'Nome Completo', type: 'text', placeholder: 'Come sul documento' },
+                    { id: 'dataNascita', label: 'Data Nascita', type: 'text', placeholder: 'GG/MM/AAAA' },
+                    { id: 'luogoNascita', label: 'Luogo Nascita', type: 'text', placeholder: 'Città' },
+                    { id: 'dataRilascio', label: 'Data Rilascio', type: 'text', placeholder: 'GG/MM/AAAA' },
+                    { id: 'dataScadenza', label: 'Data Scadenza', type: 'text', placeholder: 'GG/MM/AAAA' },
+                    { id: 'enteRilascio', label: 'Ente Rilascio', type: 'text', placeholder: 'Comune/Questura' },
+                    { id: 'extra1', label: 'Extra 1', type: 'text', placeholder: 'Info aggiuntiva' },
+                    { id: 'extra2', label: 'Extra 2', type: 'text', placeholder: 'Info aggiuntiva' },
+                    { id: 'extra3', label: 'Extra 3', type: 'text', placeholder: 'Info aggiuntiva' }
+                ]
+            },
+            'Conto Bancario': {
+                icon: '🏦',
+                fields: [
+                    { id: 'iban', label: 'IBAN *', type: 'text', placeholder: 'IT60X0542811101000000123456', encrypted: true },
+                    { id: 'bic', label: 'BIC/SWIFT', type: 'text', placeholder: 'ABCDIT12XXX' },
+                    { id: 'nomeBanca', label: 'Nome Banca', type: 'text', placeholder: 'Banca Intesa' },
+                    { id: 'filiale', label: 'Filiale', type: 'text', placeholder: 'Via Roma, 123' },
+                    { id: 'numeroCliente', label: 'Numero Cliente', type: 'text', placeholder: '12345678', encrypted: true },
+                    { id: 'numeroConto', label: 'Numero Conto', type: 'text', placeholder: '000000123456', encrypted: true },
+                    { id: 'urlBanking', label: 'URL Internet Banking', type: 'url', placeholder: 'https://...' },
+                    { id: 'extra1', label: 'Extra 1', type: 'text', placeholder: 'Info aggiuntiva' },
+                    { id: 'extra2', label: 'Extra 2', type: 'text', placeholder: 'Info aggiuntiva' },
+                    { id: 'extra3', label: 'Extra 3', type: 'text', placeholder: 'Info aggiuntiva' }
+                ]
+            },
+            'Licenza Software': {
+                icon: '💿',
+                fields: [
+                    { id: 'codiceLicenza', label: 'Codice Licenza *', type: 'text', placeholder: 'XXXXX-XXXXX-XXXXX', encrypted: true },
+                    { id: 'emailAccount', label: 'Email Account', type: 'email', placeholder: 'account@email.com' },
+                    { id: 'passwordAccount', label: 'Password Account', type: 'text', placeholder: 'Password', encrypted: true },
+                    { id: 'versione', label: 'Versione', type: 'text', placeholder: '2024 Professional' },
+                    { id: 'dataAcquisto', label: 'Data Acquisto', type: 'text', placeholder: 'GG/MM/AAAA' },
+                    { id: 'dataScadenza', label: 'Data Scadenza', type: 'text', placeholder: 'GG/MM/AAAA' },
+                    { id: 'numeroDispositivi', label: 'Numero Dispositivi', type: 'text', placeholder: '5 dispositivi' },
+                    { id: 'linkDownload', label: 'Link Download', type: 'url', placeholder: 'https://...' },
+                    { id: 'extra1', label: 'Extra 1', type: 'text', placeholder: 'Info aggiuntiva' },
+                    { id: 'extra2', label: 'Extra 2', type: 'text', placeholder: 'Info aggiuntiva' },
+                    { id: 'extra3', label: 'Extra 3', type: 'text', placeholder: 'Info aggiuntiva' }
+                ]
+            },
+            'Veicolo': {
+                icon: '🚗',
+                fields: [
+                    { id: 'targa', label: 'Targa *', type: 'text', placeholder: 'AB123CD', encrypted: true },
+                    { id: 'numeroTelaio', label: 'Numero Telaio', type: 'text', placeholder: 'ZFA12345678901234', encrypted: true },
+                    { id: 'marcaModello', label: 'Marca e Modello', type: 'text', placeholder: 'Fiat Panda' },
+                    { id: 'annoImmatricolazione', label: 'Anno Immatricolazione', type: 'text', placeholder: '2020' },
+                    { id: 'assicurazione', label: 'Assicurazione', type: 'text', placeholder: 'Compagnia + Numero Polizza' },
+                    { id: 'scadenzaAssicurazione', label: 'Scadenza Assicurazione', type: 'text', placeholder: 'GG/MM/AAAA' },
+                    { id: 'scadenzaRevisione', label: 'Scadenza Revisione', type: 'text', placeholder: 'GG/MM/AAAA' },
+                    { id: 'scadenzaBollo', label: 'Scadenza Bollo', type: 'text', placeholder: 'GG/MM/AAAA' },
+                    { id: 'extra1', label: 'Extra 1', type: 'text', placeholder: 'Info aggiuntiva' },
+                    { id: 'extra2', label: 'Extra 2', type: 'text', placeholder: 'Info aggiuntiva' },
+                    { id: 'extra3', label: 'Extra 3', type: 'text', placeholder: 'Info aggiuntiva' }
+                ]
+            },
+            'Codice Fiscale': {
+                icon: '🆔',
+                fields: [
+                    { id: 'mainData', label: 'Codice Fiscale *', type: 'text', placeholder: 'RSSMRA80A01H501Z', encrypted: true },
+                    { id: 'additionalInfo', label: 'Nome Completo', type: 'text', placeholder: 'Mario Rossi' },
+                    { id: 'extra1', label: 'Extra 1', type: 'text', placeholder: 'Info aggiuntiva' },
+                    { id: 'extra2', label: 'Extra 2', type: 'text', placeholder: 'Info aggiuntiva' },
+                    { id: 'extra3', label: 'Extra 3', type: 'text', placeholder: 'Info aggiuntiva' }
+                ]
+            },
+            'Altro': {
+                icon: '📝',
+                fields: [
+                    { id: 'mainData', label: 'Informazione *', type: 'text', placeholder: 'Dato da salvare', encrypted: true },
+                    { id: 'additionalInfo', label: 'Informazioni aggiuntive', type: 'text', placeholder: 'Dettagli' },
+                    { id: 'extra1', label: 'Extra 1', type: 'text', placeholder: 'Info aggiuntiva' },
+                    { id: 'extra2', label: 'Extra 2', type: 'text', placeholder: 'Info aggiuntiva' },
+                    { id: 'extra3', label: 'Extra 3', type: 'text', placeholder: 'Info aggiuntiva' }
+                ]
+            }
+        };
 
         // Crypto functions
         async function deriveKey(password, salt) {
@@ -2426,7 +2536,9 @@
             categories.forEach(cat => {
                 const option = document.createElement('option');
                 option.value = cat;
-                option.textContent = cat;
+                const template = memoryCategoryTemplates[cat];
+                const icon = template ? template.icon : '📝';
+                option.textContent = `${icon} ${cat}`;
                 entrySelect.appendChild(option);
             });
         }
@@ -2598,11 +2710,21 @@
                         <span class="password-card-category">${escapeHtml(entry.category)}</span>
                     </div>
                 </div>
+            card.innerHTML = `
+                <div class="password-card-header">
+                    <div>
+                        <div class="password-card-title">${escapeHtml(entry.title)}</div>
+                        <span class="password-card-category">${escapeHtml(entry.category)}</span>
+                    </div>
+                </div>
                 <div class="password-card-info">
                     ${entry.username ? `<div><strong>Username:</strong> ${escapeHtml(entry.username)}</div>` : ''}
                     ${entry.email ? `<div><strong>Email:</strong> ${escapeHtml(entry.email)}</div>` : ''}
                     ${entry.url ? `<div><strong>URL:</strong> <a href="${escapeHtml(entry.url)}" target="_blank">${escapeHtml(entry.url)}</a></div>` : ''}
                     <div><strong>Password:</strong> <span id="pwd-${entry.id}">••••••••</span></div>
+                    ${entry.extra1 ? `<div><strong>Extra 1:</strong> ${escapeHtml(entry.extra1)}</div>` : ''}
+                    ${entry.extra2 ? `<div><strong>Extra 2:</strong> ${escapeHtml(entry.extra2)}</div>` : ''}
+                    ${entry.extra3 ? `<div><strong>Extra 3:</strong> ${escapeHtml(entry.extra3)}</div>` : ''}
                     ${entry.notes ? `<div><strong>Note:</strong> ${escapeHtml(entry.notes)}</div>` : ''}
                     <div style="margin-top: 10px; color: #999; font-size: 0.85em;">
                         <strong>Ultima modifica:</strong> ${formattedDate}
@@ -2723,6 +2845,9 @@
             document.getElementById('entryEmail').value = entry.email || '';
             document.getElementById('entryPassword').value = await decrypt(entry.password, masterKey);
             document.getElementById('entryUrl').value = entry.url || '';
+            document.getElementById('entryExtra1').value = entry.extra1 || '';
+            document.getElementById('entryExtra2').value = entry.extra2 || '';
+            document.getElementById('entryExtra3').value = entry.extra3 || '';
             document.getElementById('entryNotes').value = entry.notes || '';
             
             document.getElementById('addEditModal').classList.add('active');
@@ -2738,6 +2863,9 @@
             const email = document.getElementById('entryEmail').value.trim();
             const password = document.getElementById('entryPassword').value;
             const url = document.getElementById('entryUrl').value.trim();
+            const extra1 = document.getElementById('entryExtra1').value.trim();
+            const extra2 = document.getElementById('entryExtra2').value.trim();
+            const extra3 = document.getElementById('entryExtra3').value.trim();
             const notes = document.getElementById('entryNotes').value.trim();
             
             if (!title || !password) {
@@ -2760,6 +2888,9 @@
                         email,
                         password: encryptedPassword,
                         url,
+                        extra1,
+                        extra2,
+                        extra3,
                         notes,
                         updatedAt: new Date().toISOString()
                     };
@@ -2774,6 +2905,9 @@
                     email,
                     password: encryptedPassword,
                     url,
+                    extra1,
+                    extra2,
+                    extra3,
                     notes,
                     createdAt: new Date().toISOString(),
                     updatedAt: new Date().toISOString()
@@ -2804,8 +2938,33 @@
         }
 
         // Memory Management Functions
+        // Migrate old memory entries to new format
+        function migrateMemoryEntry(entry) {
+            // If entry already has fields object, it's new format
+            if (entry.fields) return entry;
+            
+            // Old format: convert to new format
+            const category = entry.category || 'Altro';
+            const fields = {};
+            
+            // Map old fields to new structure
+            if (entry.data) fields.mainData = entry.data;
+            if (entry.additionalInfo) fields.additionalInfo = entry.additionalInfo;
+            
+            return {
+                ...entry,
+                category,
+                fields,
+                notes: entry.notes || ''
+            };
+        }
+
         async function loadMemory() {
-            const data = JSON.parse(localStorage.getItem('passwordManager_memoryData') || '[]');
+            let data = JSON.parse(localStorage.getItem('passwordManager_memoryData') || '[]');
+            
+            // Migrate old entries to new format
+            data = data.map(entry => migrateMemoryEntry(entry));
+            
             const container = document.getElementById('memoryList');
             
             if (data.length === 0) {
@@ -2834,12 +2993,14 @@
             card.className = 'password-card';
             card.dataset.id = entry.id;
             card.dataset.category = entry.category;
-            card.dataset.searchtext = `${entry.title} ${entry.additionalInfo || ''} ${entry.notes || ''}`.toLowerCase();
             
-            const decryptedData = await decrypt(entry.data, masterKey);
+            const template = memoryCategoryTemplates[entry.category];
+            const icon = template ? template.icon : '📝';
             
-            // Store data in memory cache
-            memoryCache.set(entry.id, decryptedData);
+            // Build search text
+            let searchText = `${entry.title} ${entry.category}`;
+            if (entry.notes) searchText += ` ${entry.notes}`;
+            card.dataset.searchtext = searchText.toLowerCase();
             
             // Format date
             const updatedDate = new Date(entry.updatedAt || entry.createdAt);
@@ -2851,24 +3012,57 @@
                 minute: '2-digit'
             });
             
+            // Build fields HTML
+            let fieldsHTML = '';
+            
+            if (entry.fields && template) {
+                for (const field of template.fields) {
+                    const fieldValue = entry.fields[field.id];
+                    if (fieldValue) {
+                        const fieldId = `mem_${entry.id}_${field.id}`;
+                        const isEncrypted = field.encrypted;
+                        
+                        if (isEncrypted) {
+                            // Decrypt and store in cache
+                            const decrypted = await decrypt(fieldValue, masterKey);
+                            if (!memoryCache.has(entry.id)) {
+                                memoryCache.set(entry.id, {});
+                            }
+                            const cacheData = memoryCache.get(entry.id);
+                            cacheData[field.id] = decrypted;
+                            memoryCache.set(entry.id, cacheData);
+                            
+                            // Show hidden with toggle button
+                            fieldsHTML += `
+                                <div>
+                                    <strong>${escapeHtml(field.label.replace('*', '').trim())}:</strong> 
+                                    <span id="${fieldId}">••••••••</span>
+                                    <button class="icon-btn btn-show" style="font-size: 0.8em; padding: 2px 6px; margin-left: 5px;" onclick="toggleMemoryFieldById('${entry.id}', '${field.id}', '${fieldId}')">👁️</button>
+                                </div>
+                            `;
+                        } else {
+                            // Show plain text
+                            fieldsHTML += `<div><strong>${escapeHtml(field.label.replace('*', '').trim())}:</strong> ${escapeHtml(fieldValue)}</div>`;
+                        }
+                    }
+                }
+            }
+            
             card.innerHTML = `
                 <div class="password-card-header">
                     <div>
-                        <div class="password-card-title">${escapeHtml(entry.title)}</div>
+                        <div class="password-card-title">${icon} ${escapeHtml(entry.title)}</div>
                         <span class="password-card-category">${escapeHtml(entry.category)}</span>
                     </div>
                 </div>
                 <div class="password-card-info">
-                    <div><strong>Informazione:</strong> <span id="mem-${entry.id}">••••••••</span></div>
-                    ${entry.additionalInfo ? `<div><strong>Dettagli:</strong> ${escapeHtml(entry.additionalInfo)}</div>` : ''}
-                    ${entry.notes ? `<div><strong>Note:</strong> ${escapeHtml(entry.notes)}</div>` : ''}
+                    ${fieldsHTML}
+                    ${entry.notes ? `<div style="margin-top: 10px;"><strong>Note:</strong> ${escapeHtml(entry.notes)}</div>` : ''}
                     <div style="margin-top: 10px; color: #999; font-size: 0.85em;">
                         <strong>Ultima modifica:</strong> ${formattedDate}
                     </div>
                 </div>
                 <div class="password-card-actions">
-                    <button class="icon-btn btn-copy" onclick="copyMemoryDataById('${entry.id}')">📋 Copia</button>
-                    <button class="icon-btn btn-show" onclick="toggleMemoryDataById('${entry.id}')">👁️ Mostra</button>
                     <button class="icon-btn btn-edit" onclick="editMemoryEntry('${entry.id}')">✏️ Modifica</button>
                     <button class="icon-btn btn-delete" onclick="deleteMemoryEntry('${entry.id}')">🗑️ Elimina</button>
                 </div>
@@ -2919,6 +3113,28 @@
             }
         }
 
+        // Toggle individual memory field
+        function toggleMemoryFieldById(entryId, fieldId, spanId) {
+            const span = document.getElementById(spanId);
+            if (!span) return;
+            
+            const cacheData = memoryCache.get(entryId);
+            if (!cacheData || !cacheData[fieldId]) return;
+            
+            const fieldValue = cacheData[fieldId];
+            
+            if (span.textContent === '••••••••') {
+                span.textContent = fieldValue;
+                if (settings.autoHideDelay > 0) {
+                    setTimeout(() => {
+                        span.textContent = '••••••••';
+                    }, settings.autoHideDelay * 1000);
+                }
+            } else {
+                span.textContent = '••••••••';
+            }
+        }
+
         // Legacy wrapper functions (redirect to new functions)
         function toggleMemoryDataFromButton(button, id) {
             toggleMemoryDataById(id);
@@ -2943,10 +3159,44 @@
             }
         }
 
+        // Update memory form fields based on selected category
+        function updateMemoryFields() {
+            const category = document.getElementById('memoryCategory').value;
+            const container = document.getElementById('memoryDynamicFields');
+            const template = memoryCategoryTemplates[category];
+            
+            if (!template) {
+                container.innerHTML = '';
+                return;
+            }
+            
+            container.innerHTML = '';
+            
+            template.fields.forEach(field => {
+                const div = document.createElement('div');
+                div.className = 'input-group';
+                
+                const label = document.createElement('label');
+                label.setAttribute('for', `mem_${field.id}`);
+                label.textContent = field.label;
+                
+                const input = document.createElement('input');
+                input.type = field.type;
+                input.id = `mem_${field.id}`;
+                input.placeholder = field.placeholder;
+                input.dataset.encrypted = field.encrypted || false;
+                
+                div.appendChild(label);
+                div.appendChild(input);
+                container.appendChild(div);
+            });
+        }
+
         function showAddMemoryModal() {
             currentMemoryEditId = null;
             document.getElementById('memoryModalTitle').textContent = 'Aggiungi Informazione';
             clearMemoryModalFields();
+            updateMemoryFields(); // Update fields for selected category
             document.getElementById('addEditMemoryModal').classList.add('active');
             resetModalScroll('addEditMemoryModal');
         }
@@ -2962,8 +3212,25 @@
             
             document.getElementById('memoryTitle').value = entry.title;
             document.getElementById('memoryCategory').value = entry.category;
-            document.getElementById('memoryData').value = await decrypt(entry.data, masterKey);
-            document.getElementById('memoryAdditionalInfo').value = entry.additionalInfo || '';
+            
+            // Update fields based on category
+            updateMemoryFields();
+            
+            // Load field values
+            if (entry.fields) {
+                for (const [fieldId, fieldValue] of Object.entries(entry.fields)) {
+                    const input = document.getElementById(`mem_${fieldId}`);
+                    if (input) {
+                        // Decrypt if needed
+                        if (input.dataset.encrypted === 'true' && fieldValue) {
+                            input.value = await decrypt(fieldValue, masterKey);
+                        } else {
+                            input.value = fieldValue || '';
+                        }
+                    }
+                }
+            }
+            
             document.getElementById('memoryNotes').value = entry.notes || '';
             
             document.getElementById('addEditMemoryModal').classList.add('active');
@@ -2973,17 +3240,49 @@
         async function saveMemoryEntry() {
             const title = document.getElementById('memoryTitle').value.trim();
             const category = document.getElementById('memoryCategory').value;
-            const data = document.getElementById('memoryData').value.trim();
-            const additionalInfo = document.getElementById('memoryAdditionalInfo').value.trim();
             const notes = document.getElementById('memoryNotes').value.trim();
             
-            if (!title || !data) {
-                showToast('Titolo e informazione sono obbligatori', 'error');
+            // Collect all dynamic fields
+            const fields = {};
+            const template = memoryCategoryTemplates[category];
+            let hasRequiredField = false;
+            
+            if (template) {
+                for (const field of template.fields) {
+                    const input = document.getElementById(`mem_${field.id}`);
+                    if (input) {
+                        const value = input.value.trim();
+                        if (value) {
+                            // Encrypt if needed
+                            if (input.dataset.encrypted === 'true') {
+                                fields[field.id] = await encrypt(value, masterKey);
+                            } else {
+                                fields[field.id] = value;
+                            }
+                            // Check if it's a required field (has * in label)
+                            if (field.label.includes('*')) {
+                                hasRequiredField = true;
+                            }
+                        } else if (field.label.includes('*')) {
+                            // Required field is empty
+                            showToast(`${field.label.replace('*', '').trim()} è obbligatorio`, 'error');
+                            return;
+                        }
+                    }
+                }
+            }
+            
+            if (!title) {
+                showToast('Il titolo è obbligatorio', 'error');
+                return;
+            }
+            
+            if (!hasRequiredField && Object.keys(fields).length === 0) {
+                showToast('Compila almeno un campo obbligatorio', 'error');
                 return;
             }
             
             const memoryData = JSON.parse(localStorage.getItem('passwordManager_memoryData') || '[]');
-            const encryptedData = await encrypt(data, masterKey);
             
             if (currentMemoryEditId) {
                 const index = memoryData.findIndex(e => e.id === currentMemoryEditId);
@@ -2992,8 +3291,7 @@
                         ...memoryData[index],
                         title,
                         category,
-                        data: encryptedData,
-                        additionalInfo,
+                        fields,
                         notes,
                         updatedAt: new Date().toISOString()
                     };
@@ -3003,8 +3301,7 @@
                     id: Date.now().toString(),
                     title,
                     category,
-                    data: encryptedData,
-                    additionalInfo,
+                    fields,
                     notes,
                     createdAt: new Date().toISOString(),
                     updatedAt: new Date().toISOString()
@@ -3044,8 +3341,10 @@
             if (categories.length > 0) {
                 document.getElementById('memoryCategory').value = categories[0];
             }
-            document.getElementById('memoryData').value = '';
-            document.getElementById('memoryAdditionalInfo').value = '';
+            // Clear dynamic fields
+            const container = document.getElementById('memoryDynamicFields');
+            const inputs = container.querySelectorAll('input, textarea');
+            inputs.forEach(input => input.value = '');
             document.getElementById('memoryNotes').value = '';
         }
 

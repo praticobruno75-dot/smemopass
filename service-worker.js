@@ -1,7 +1,7 @@
 // SMEMOPASS Service Worker
-// Version 10.0.0 - Fixed quotes with memory cache
+// Version 12.0.0 - Removed duplicate categories
 
-const CACHE_NAME = 'smemopass-v10';
+const CACHE_NAME = 'smemopass-v12';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
