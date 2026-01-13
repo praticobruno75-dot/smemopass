@@ -1,7 +1,7 @@
 // SMEMOPASS Service Worker
-// Version 14.0.0 - Added password visibility toggle in form
+// Version 15.0.0 - Fixed category filter persistence after save
 
-const CACHE_NAME = 'smemopass-v14';
+const CACHE_NAME = 'smemopass-v15';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',

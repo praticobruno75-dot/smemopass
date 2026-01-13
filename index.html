@@ -2673,10 +2673,12 @@
             
             container.innerHTML = '';
             
-            for (const entry of data) {
-                const card = await createPasswordCard(entry);
-                container.appendChild(card);
-            }
+            // Create all cards and wait for all of them
+            const cardPromises = data.map(entry => createPasswordCard(entry));
+            const cards = await Promise.all(cardPromises);
+            
+            // Append all cards to DOM
+            cards.forEach(card => container.appendChild(card));
         }
 
         // Store decrypted passwords in memory (fixes quotes issue)
@@ -2912,7 +2914,7 @@
             
             localStorage.setItem('passwordManager_data', JSON.stringify(data));
             closeModal();
-            loadPasswords();
+            await loadPasswords();
             filterPasswords(); // Re-apply the filter after loading
             if (currentTab === 'dashboard') loadDashboard();
             incrementChanges();
@@ -2978,10 +2980,12 @@
             
             container.innerHTML = '';
             
-            for (const entry of data) {
-                const card = await createMemoryCard(entry);
-                container.appendChild(card);
-            }
+            // Create all cards and wait for all of them
+            const cardPromises = data.map(entry => createMemoryCard(entry));
+            const cards = await Promise.all(cardPromises);
+            
+            // Append all cards to DOM
+            cards.forEach(card => container.appendChild(card));
         }
 
         async function createMemoryCard(entry) {
@@ -3306,7 +3310,7 @@
             
             localStorage.setItem('passwordManager_memoryData', JSON.stringify(memoryData));
             closeMemoryModal();
-            loadMemory();
+            await loadMemory();
             filterMemory(); // Re-apply the filter after loading
             if (currentTab === 'dashboard') loadDashboard();
             incrementChanges();
