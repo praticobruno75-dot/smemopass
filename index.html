@@ -2654,7 +2654,11 @@
 
         // Load and display passwords
         async function loadPasswords() {
-            const data = JSON.parse(localStorage.getItem('passwordManager_data') || '[]');
+            let data = JSON.parse(localStorage.getItem('passwordManager_data') || '[]');
+            
+            // Sort alphabetically by title (case-insensitive)
+            data.sort((a, b) => a.title.toLowerCase().localeCompare(b.title.toLowerCase()));
+            
             const container = document.getElementById('passwordList');
             
             if (data.length === 0) {
@@ -2962,6 +2966,9 @@
             
             // Migrate old entries to new format
             data = data.map(entry => migrateMemoryEntry(entry));
+            
+            // Sort alphabetically by title (case-insensitive)
+            data.sort((a, b) => a.title.toLowerCase().localeCompare(b.title.toLowerCase()));
             
             const container = document.getElementById('memoryList');
             

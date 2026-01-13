@@ -1,7 +1,7 @@
 // SMEMOPASS Service Worker
-// Version 15.0.0 - Fixed category filter persistence after save
+// Version 16.0.0 - Added alphabetical sorting (case-insensitive)
 
-const CACHE_NAME = 'smemopass-v15';
+const CACHE_NAME = 'smemopass-v16';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
