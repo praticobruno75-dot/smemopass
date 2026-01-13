@@ -1,7 +1,7 @@
 // SMEMOPASS Service Worker
-// Version 16.0.0 - Added alphabetical sorting (case-insensitive)
+// Version 17.0.0 - Fixed chrome-extension errors
 
-const CACHE_NAME = 'smemopass-v16';
+const CACHE_NAME = 'smemopass-v17';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
@@ -62,6 +62,12 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
+  // Ignore chrome-extension and other non-http(s) requests
+  const url = event.request.url;
+  if (!url.startsWith('http://') && !url.startsWith('https://')) {
+    return;
+  }
+
   event.respondWith(
     caches.match(event.request)
       .then((cachedResponse) => {
@@ -84,6 +90,10 @@ self.addEventListener('fetch', (event) => {
             caches.open(CACHE_NAME)
               .then((cache) => {
                 cache.put(event.request, responseToCache);
+              })
+              .catch((err) => {
+                // Silently ignore cache errors (e.g., from extensions)
+                console.warn('[Service Worker] Cache put failed:', err);
               });
 
             return response;
