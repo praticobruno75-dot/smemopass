@@ -2710,13 +2710,6 @@
                         <span class="password-card-category">${escapeHtml(entry.category)}</span>
                     </div>
                 </div>
-            card.innerHTML = `
-                <div class="password-card-header">
-                    <div>
-                        <div class="password-card-title">${escapeHtml(entry.title)}</div>
-                        <span class="password-card-category">${escapeHtml(entry.category)}</span>
-                    </div>
-                </div>
                 <div class="password-card-info">
                     ${entry.username ? `<div><strong>Username:</strong> ${escapeHtml(entry.username)}</div>` : ''}
                     ${entry.email ? `<div><strong>Email:</strong> ${escapeHtml(entry.email)}</div>` : ''}

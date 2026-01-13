@@ -1,7 +1,7 @@
 // SMEMOPASS Service Worker
-// Version 12.0.0 - Removed duplicate categories
+// Version 13.0.0 - Fixed syntax error
 
-const CACHE_NAME = 'smemopass-v12';
+const CACHE_NAME = 'smemopass-v13';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
