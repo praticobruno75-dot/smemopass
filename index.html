@@ -1229,7 +1229,10 @@
 
             <div class="input-group">
                 <label for="entryPassword">Password *</label>
-                <input type="password" id="entryPassword" placeholder="password" oninput="checkPasswordStrength()">
+                <div style="position: relative;">
+                    <input type="password" id="entryPassword" placeholder="password" oninput="checkPasswordStrength()" style="padding-right: 45px;">
+                    <button type="button" onclick="togglePasswordInputVisibility()" style="position: absolute; right: 5px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; font-size: 1.2em; padding: 5px;">👁️</button>
+                </div>
                 <div class="password-strength">
                     <div class="password-strength-bar" id="strengthBar"></div>
                 </div>
@@ -3382,6 +3385,16 @@
         }
 
         // Check password strength
+        // Toggle password visibility in input field
+        function togglePasswordInputVisibility() {
+            const input = document.getElementById('entryPassword');
+            if (input.type === 'password') {
+                input.type = 'text';
+            } else {
+                input.type = 'password';
+            }
+        }
+
         function checkPasswordStrength() {
             const password = document.getElementById('entryPassword').value;
             const bar = document.getElementById('strengthBar');

@@ -1,7 +1,7 @@
 // SMEMOPASS Service Worker
-// Version 13.0.0 - Fixed syntax error
+// Version 14.0.0 - Added password visibility toggle in form
 
-const CACHE_NAME = 'smemopass-v13';
+const CACHE_NAME = 'smemopass-v14';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
