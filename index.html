@@ -2231,10 +2231,15 @@
                 resetInactivityTimer();
                 showToast('Accesso effettuato', 'success');
                 
+                // Check if sync needs connection
+                checkSyncConnection();
+                
                 // Load Sync Tool in hidden iframe (won't block if it fails)
                 try {
                     const syncEnabled = localStorage.getItem('googleDriveSyncEnabled');
-                    if (syncEnabled === 'true') {
+                    const accessToken = localStorage.getItem('googleDriveAccessToken');
+                    if (syncEnabled === 'true' && accessToken) {
+                        // Only load iframe if already connected
                         setTimeout(() => {
                             const syncFrame = document.createElement('iframe');
                             syncFrame.id = 'syncToolFrame';
@@ -4138,7 +4143,8 @@
                 localStorage.setItem('googleDriveSyncEnabled', enabled ? 'true' : 'false');
                 
                 if (enabled) {
-                    showToast('✅ Sync abilitato! Ricarica l\'app per attivarlo.', 'success');
+                    // Open sync tool in popup
+                    openSyncToolPopup();
                 } else {
                     showToast('Sync disabilitato', 'info');
                     // Remove sync frame if exists
@@ -4149,6 +4155,100 @@
                 saveSettings();
             } catch (error) {
                 console.error('[Sync] Toggle error:', error);
+            }
+        }
+
+        // Open sync tool in popup window
+        function openSyncToolPopup() {
+            try {
+                const width = 650;
+                const height = 700;
+                const left = (screen.width - width) / 2;
+                const top = (screen.height - height) / 2;
+                
+                const popup = window.open(
+                    'smemopass_sync.html',
+                    'SyncTool',
+                    `width=${width},height=${height},left=${left},top=${top},resizable=yes,scrollbars=yes`
+                );
+                
+                if (!popup) {
+                    showToast('⚠️ Abilita i popup per questo sito', 'error');
+                    return;
+                }
+                
+                showToast('🔗 Connetti Google Drive nel popup', 'info');
+            } catch (error) {
+                console.error('[Sync] Popup error:', error);
+                showToast('❌ Errore apertura popup', 'error');
+            }
+        }
+
+        // Listen for messages from sync tool
+        window.addEventListener('message', (event) => {
+            try {
+                // Verify message is from our domain
+                if (!event.origin.includes('github.io') && event.origin !== window.location.origin) {
+                    return;
+                }
+                
+                if (event.data.type === 'sync_connected') {
+                    console.log('[Sync] Connected to Google Drive');
+                    showToast('✅ Connesso a Google Drive!', 'success');
+                    
+                    // Reload sync frame if not already loaded
+                    setTimeout(() => {
+                        const syncFrame = document.getElementById('syncToolFrame');
+                        if (!syncFrame && localStorage.getItem('googleDriveSyncEnabled') === 'true') {
+                            const frame = document.createElement('iframe');
+                            frame.id = 'syncToolFrame';
+                            frame.src = 'smemopass_sync.html';
+                            frame.style.display = 'none';
+                            frame.style.width = '0';
+                            frame.style.height = '0';
+                            frame.style.border = 'none';
+                            document.body.appendChild(frame);
+                            console.log('[Sync] Background sync activated');
+                        }
+                    }, 1000);
+                } else if (event.data.type === 'sync_available') {
+                    // Backup available on Drive
+                    const shouldSync = confirm(
+                        '🔄 Sincronizzazione disponibile\n\n' +
+                        'Backup più recente trovato su Google Drive:\n' +
+                        `Data: ${event.data.date}\n\n` +
+                        'Vuoi sincronizzare?\n\n' +
+                        '⚠️ I dati locali verranno sostituiti.'
+                    );
+                    
+                    if (shouldSync) {
+                        // Tell sync tool to download
+                        const syncFrame = document.getElementById('syncToolFrame');
+                        if (syncFrame && syncFrame.contentWindow) {
+                            syncFrame.contentWindow.postMessage({ type: 'download_backup' }, '*');
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error('[Sync] Message handler error:', error);
+            }
+        });
+
+        // Check if sync needs connection on app start
+        function checkSyncConnection() {
+            try {
+                const syncEnabled = localStorage.getItem('googleDriveSyncEnabled');
+                const accessToken = localStorage.getItem('googleDriveAccessToken');
+                
+                if (syncEnabled === 'true' && !accessToken) {
+                    // Sync enabled but not connected - open popup
+                    console.log('[Sync] Not connected, opening popup');
+                    setTimeout(() => {
+                        openSyncToolPopup();
+                    }, 2000); // Wait 2 seconds after login
+                }
+            } catch (error) {
+                console.error('[Sync] Check connection error:', error);
             }
         }
 
