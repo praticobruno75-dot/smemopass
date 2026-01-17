@@ -1007,6 +1007,7 @@
             opacity: 0.3;
         }
     </style>
+    
 </head>
 <body>
     <div class="container">
@@ -1448,6 +1449,21 @@
                     <option value="20">20 modifiche</option>
                 </select>
                 <small style="color: #666; margin-top: 5px; display: block;">Dopo quante modifiche vuoi essere avvisato di fare un backup</small>
+            </div>
+
+            <hr style="margin: 20px 0; border: none; border-top: 1px solid #ddd;">
+            
+            <h3 style="margin: 20px 0 10px 0; font-size: 1.1em;">☁️ Sincronizzazione Cloud</h3>
+            
+            <div class="input-group">
+                <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
+                    <input type="checkbox" id="enableGoogleDriveSync" onchange="toggleGoogleDriveSync()" style="width: auto;">
+                    <span>Abilita sincronizzazione Google Drive</span>
+                </label>
+                <small style="color: #666; margin-top: 5px; display: block;">
+                    ⚠️ Richiede configurazione credenziali Google Drive (vedi GOOGLE_DRIVE_SETUP.md)<br>
+                    Dopo l'attivazione, apri <a href="smemopass_sync.html" target="_blank" style="color: #667eea;">smemopass_sync.html</a> per connetterti
+                </small>
             </div>
 
             <div style="margin-top: 30px; padding-top: 20px; border-top: 2px solid #e0e0e0;">
@@ -2214,6 +2230,27 @@
                 loadDashboard();
                 resetInactivityTimer();
                 showToast('Accesso effettuato', 'success');
+                
+                // Load Sync Tool in hidden iframe (won't block if it fails)
+                try {
+                    const syncEnabled = localStorage.getItem('googleDriveSyncEnabled');
+                    if (syncEnabled === 'true') {
+                        setTimeout(() => {
+                            const syncFrame = document.createElement('iframe');
+                            syncFrame.id = 'syncToolFrame';
+                            syncFrame.src = 'smemopass_sync.html';
+                            syncFrame.style.display = 'none';
+                            syncFrame.style.width = '0';
+                            syncFrame.style.height = '0';
+                            syncFrame.style.border = 'none';
+                            document.body.appendChild(syncFrame);
+                            console.log('[Sync] Tool caricato in background');
+                        }, 2000); // Load after 2 seconds to not slow down login
+                    }
+                } catch (error) {
+                    console.error('[Sync] Errore caricamento tool:', error);
+                    // Fail silently - app continues normally
+                }
             } catch (e) {
                 showToast('Errore durante l\'accesso', 'error');
             }
@@ -2234,6 +2271,17 @@
             document.getElementById('searchMemoryInput').value = '';
             document.getElementById('categoryFilter').value = '';
             document.getElementById('memoryCategoryFilter').value = '';
+            
+            // Remove Sync Tool iframe if exists
+            try {
+                const syncFrame = document.getElementById('syncToolFrame');
+                if (syncFrame) {
+                    syncFrame.remove();
+                    console.log('[Sync] Tool rimosso');
+                }
+            } catch (error) {
+                console.error('[Sync] Errore rimozione tool:', error);
+            }
             
             // Reset to dashboard tab
             switchTab('dashboard');
@@ -3448,6 +3496,18 @@
             document.getElementById('backupReminder').checked = settings.backupReminder;
             document.getElementById('backupReminderThreshold').value = settings.backupReminderThreshold;
             
+            // Load Google Drive sync settings (SAFE)
+            try {
+                const syncEnabled = localStorage.getItem('googleDriveSyncEnabled') === 'true';
+                const enableCheckbox = document.getElementById('enableGoogleDriveSync');
+                if (enableCheckbox) {
+                    enableCheckbox.checked = syncEnabled;
+                    toggleGoogleDriveSync();
+                }
+            } catch (error) {
+                console.error('[Settings] Google Drive load error:', error);
+            }
+            
             // Show/hide threshold setting based on reminder checkbox
             toggleBackupThreshold();
             
@@ -3830,7 +3890,9 @@
             
             reader.onload = function(e) {
                 try {
+                    console.log('[Import] File size:', file.size, 'bytes');
                     const importObj = JSON.parse(e.target.result);
+                    console.log('[Import] Parsed successfully');
                     
                     if (!importObj.version || !importObj.salt) {
                         throw new Error('Formato file non valido');
@@ -3841,12 +3903,33 @@
                         return;
                     }
                     
-                    localStorage.setItem('passwordManager_salt', importObj.salt);
+                    console.log('[Import] Starting import...');
+                    
+                    // Check localStorage quota before import
+                    try {
+                        localStorage.setItem('passwordManager_salt', importObj.salt);
+                    } catch (quotaError) {
+                        console.error('[Import] Quota error:', quotaError);
+                        throw new Error('Memoria locale piena. Prova a eliminare alcuni dati prima di importare.');
+                    }
                     
                     // Handle version 2.0 (with memory data)
                     if (importObj.version === '2.0') {
-                        localStorage.setItem('passwordManager_data', JSON.stringify(importObj.passwordData || []));
-                        localStorage.setItem('passwordManager_memoryData', JSON.stringify(importObj.memoryData || []));
+                        try {
+                            localStorage.setItem('passwordManager_data', JSON.stringify(importObj.passwordData || []));
+                            console.log('[Import] Password data saved:', (importObj.passwordData || []).length, 'entries');
+                        } catch (err) {
+                            console.error('[Import] Error saving password data:', err);
+                            throw new Error('Errore salvando le password: ' + err.message);
+                        }
+                        
+                        try {
+                            localStorage.setItem('passwordManager_memoryData', JSON.stringify(importObj.memoryData || []));
+                            console.log('[Import] Memory data saved:', (importObj.memoryData || []).length, 'entries');
+                        } catch (err) {
+                            console.error('[Import] Error saving memory data:', err);
+                            throw new Error('Errore salvando la memoria digitale: ' + err.message);
+                        }
                         
                         // Handle categories - check if they exist in import
                         if (importObj.passwordCategories) {
@@ -4038,6 +4121,35 @@
             });
         } else {
             console.warn('⚠️ Service Workers not supported in this browser');
+        }
+
+        // ====================================
+        // GOOGLE DRIVE SYNC FUNCTIONS (SAFE VERSION)
+        // All functions are wrapped in try-catch and check prerequisites
+        // ====================================
+
+        // Toggle Google Drive Sync (SAFE)
+        function toggleGoogleDriveSync() {
+            try {
+                const checkbox = document.getElementById('enableGoogleDriveSync');
+                if (!checkbox) return;
+                
+                const enabled = checkbox.checked;
+                localStorage.setItem('googleDriveSyncEnabled', enabled ? 'true' : 'false');
+                
+                if (enabled) {
+                    showToast('✅ Sync abilitato! Ricarica l\'app per attivarlo.', 'success');
+                } else {
+                    showToast('Sync disabilitato', 'info');
+                    // Remove sync frame if exists
+                    const syncFrame = document.getElementById('syncToolFrame');
+                    if (syncFrame) syncFrame.remove();
+                }
+                
+                saveSettings();
+            } catch (error) {
+                console.error('[Sync] Toggle error:', error);
+            }
         }
 
         // Install prompt for PWA
