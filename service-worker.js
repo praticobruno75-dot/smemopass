@@ -1,7 +1,7 @@
 // SMEMOPASS Service Worker
-// Version 17.0.0 - Fixed chrome-extension errors
+// Version 19.0.0 - Google Drive Sync Integration
 
-const CACHE_NAME = 'smemopass-v17';
+const CACHE_NAME = 'smemopass-v19';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
