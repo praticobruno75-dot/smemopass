@@ -1,7 +1,7 @@
 // SMEMOPASS Service Worker
-// Version 20.0.0 - Exclude sync tool from cache
+// Version 21.0.0 - Remove sync tool reference
 
-const CACHE_NAME = 'smemopass-v20';
+const CACHE_NAME = 'smemopass-v21';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
@@ -65,13 +65,6 @@ self.addEventListener('fetch', (event) => {
   // Ignore chrome-extension and other non-http(s) requests
   const url = event.request.url;
   if (!url.startsWith('http://') && !url.startsWith('https://')) {
-    return;
-  }
-
-  // NEVER cache smemopass_sync.html (always fetch fresh)
-  if (url.includes('smemopass_sync.html')) {
-    console.log('[Service Worker] Bypassing cache for sync tool');
-    event.respondWith(fetch(event.request));
     return;
   }
 
