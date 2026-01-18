@@ -3704,6 +3704,12 @@
         function checkBackupReminder() {
             if (!settings.backupReminder) return;
             
+            // Skip reminder if Google Drive sync is enabled
+            const syncEnabled = localStorage.getItem('googleDriveSyncEnabled');
+            if (syncEnabled === 'true') {
+                return; // Auto-sync is active, no need for manual backup reminders
+            }
+            
             const lastBackup = localStorage.getItem('passwordManager_lastBackup');
             const changesSinceBackup = parseInt(localStorage.getItem('passwordManager_changesSinceBackup') || '0');
             
