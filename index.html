@@ -1461,8 +1461,9 @@
                     <span>Abilita sincronizzazione Google Drive</span>
                 </label>
                 <small style="color: #666; margin-top: 5px; display: block;">
-                    ⚠️ Richiede configurazione credenziali Google Drive (vedi GOOGLE_DRIVE_SETUP.md)<br>
-                    Dopo l'attivazione, apri <a href="smemopass_sync.html" target="_blank" style="color: #667eea;">smemopass_sync.html</a> per connetterti
+                    🔌 Richiede installazione <strong>Estensione Chrome "SMEMOPASS Sync"</strong><br>
+                    ✅ Sync automatico in background - Zero click necessari!<br>
+                    📥 Scarica l'estensione dal pacchetto fornito
                 </small>
             </div>
 
@@ -2230,32 +2231,6 @@
                 loadDashboard();
                 resetInactivityTimer();
                 showToast('Accesso effettuato', 'success');
-                
-                // Check if sync needs connection
-                checkSyncConnection();
-                
-                // Load Sync Tool in hidden iframe (won't block if it fails)
-                try {
-                    const syncEnabled = localStorage.getItem('googleDriveSyncEnabled');
-                    const accessToken = localStorage.getItem('googleDriveAccessToken');
-                    if (syncEnabled === 'true' && accessToken) {
-                        // Only load iframe if already connected
-                        setTimeout(() => {
-                            const syncFrame = document.createElement('iframe');
-                            syncFrame.id = 'syncToolFrame';
-                            syncFrame.src = 'smemopass_sync.html';
-                            syncFrame.style.display = 'none';
-                            syncFrame.style.width = '0';
-                            syncFrame.style.height = '0';
-                            syncFrame.style.border = 'none';
-                            document.body.appendChild(syncFrame);
-                            console.log('[Sync] Tool caricato in background');
-                        }, 2000); // Load after 2 seconds to not slow down login
-                    }
-                } catch (error) {
-                    console.error('[Sync] Errore caricamento tool:', error);
-                    // Fail silently - app continues normally
-                }
             } catch (e) {
                 showToast('Errore durante l\'accesso', 'error');
             }
@@ -2276,17 +2251,6 @@
             document.getElementById('searchMemoryInput').value = '';
             document.getElementById('categoryFilter').value = '';
             document.getElementById('memoryCategoryFilter').value = '';
-            
-            // Remove Sync Tool iframe if exists
-            try {
-                const syncFrame = document.getElementById('syncToolFrame');
-                if (syncFrame) {
-                    syncFrame.remove();
-                    console.log('[Sync] Tool rimosso');
-                }
-            } catch (error) {
-                console.error('[Sync] Errore rimozione tool:', error);
-            }
             
             // Reset to dashboard tab
             switchTab('dashboard');
@@ -4143,112 +4107,14 @@
                 localStorage.setItem('googleDriveSyncEnabled', enabled ? 'true' : 'false');
                 
                 if (enabled) {
-                    // Open sync tool in popup
-                    openSyncToolPopup();
+                    showToast('✅ Sync abilitato! Installa l\'estensione Chrome per attivarlo.', 'success');
                 } else {
                     showToast('Sync disabilitato', 'info');
-                    // Remove sync frame if exists
-                    const syncFrame = document.getElementById('syncToolFrame');
-                    if (syncFrame) syncFrame.remove();
                 }
                 
                 saveSettings();
             } catch (error) {
                 console.error('[Sync] Toggle error:', error);
-            }
-        }
-
-        // Open sync tool in popup window
-        function openSyncToolPopup() {
-            try {
-                const width = 650;
-                const height = 700;
-                const left = (screen.width - width) / 2;
-                const top = (screen.height - height) / 2;
-                
-                const popup = window.open(
-                    'smemopass_sync.html',
-                    'SyncTool',
-                    `width=${width},height=${height},left=${left},top=${top},resizable=yes,scrollbars=yes`
-                );
-                
-                if (!popup) {
-                    showToast('⚠️ Abilita i popup per questo sito', 'error');
-                    return;
-                }
-                
-                showToast('🔗 Connetti Google Drive nel popup', 'info');
-            } catch (error) {
-                console.error('[Sync] Popup error:', error);
-                showToast('❌ Errore apertura popup', 'error');
-            }
-        }
-
-        // Listen for messages from sync tool
-        window.addEventListener('message', (event) => {
-            try {
-                // Verify message is from our domain
-                if (!event.origin.includes('github.io') && event.origin !== window.location.origin) {
-                    return;
-                }
-                
-                if (event.data.type === 'sync_connected') {
-                    console.log('[Sync] Connected to Google Drive');
-                    showToast('✅ Connesso a Google Drive!', 'success');
-                    
-                    // Reload sync frame if not already loaded
-                    setTimeout(() => {
-                        const syncFrame = document.getElementById('syncToolFrame');
-                        if (!syncFrame && localStorage.getItem('googleDriveSyncEnabled') === 'true') {
-                            const frame = document.createElement('iframe');
-                            frame.id = 'syncToolFrame';
-                            frame.src = 'smemopass_sync.html';
-                            frame.style.display = 'none';
-                            frame.style.width = '0';
-                            frame.style.height = '0';
-                            frame.style.border = 'none';
-                            document.body.appendChild(frame);
-                            console.log('[Sync] Background sync activated');
-                        }
-                    }, 1000);
-                } else if (event.data.type === 'sync_available') {
-                    // Backup available on Drive
-                    const shouldSync = confirm(
-                        '🔄 Sincronizzazione disponibile\n\n' +
-                        'Backup più recente trovato su Google Drive:\n' +
-                        `Data: ${event.data.date}\n\n` +
-                        'Vuoi sincronizzare?\n\n' +
-                        '⚠️ I dati locali verranno sostituiti.'
-                    );
-                    
-                    if (shouldSync) {
-                        // Tell sync tool to download
-                        const syncFrame = document.getElementById('syncToolFrame');
-                        if (syncFrame && syncFrame.contentWindow) {
-                            syncFrame.contentWindow.postMessage({ type: 'download_backup' }, '*');
-                        }
-                    }
-                }
-            } catch (error) {
-                console.error('[Sync] Message handler error:', error);
-            }
-        });
-
-        // Check if sync needs connection on app start
-        function checkSyncConnection() {
-            try {
-                const syncEnabled = localStorage.getItem('googleDriveSyncEnabled');
-                const accessToken = localStorage.getItem('googleDriveAccessToken');
-                
-                if (syncEnabled === 'true' && !accessToken) {
-                    // Sync enabled but not connected - open popup
-                    console.log('[Sync] Not connected, opening popup');
-                    setTimeout(() => {
-                        openSyncToolPopup();
-                    }, 2000); // Wait 2 seconds after login
-                }
-            } catch (error) {
-                console.error('[Sync] Check connection error:', error);
             }
         }
 
