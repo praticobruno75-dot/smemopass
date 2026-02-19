@@ -1451,6 +1451,27 @@
                 <small style="color: #666; margin-top: 5px; display: block;">Dopo quante modifiche vuoi essere avvisato di fare un backup</small>
             </div>
 
+            <div class="input-group">
+                <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
+                    <input type="checkbox" id="autoSaveBackup" onchange="toggleAutoSaveBackup()" style="width: auto;">
+                    <span>Salva backup automaticamente in cartella</span>
+                </label>
+                <small style="color: #666; margin-top: 5px; display: block;">
+                    💾 Backup salvati automaticamente senza dialog "Salva con nome"<br>
+                    ⚠️ Funziona solo su Chrome/Edge (non Firefox/Safari)
+                </small>
+            </div>
+
+            <div class="input-group" id="backupFolderGroup" style="display: none;">
+                <button class="btn btn-secondary" onclick="selectBackupFolder()" style="width: 100%;">
+                    📁 Scegli cartella backup
+                </button>
+                <div id="backupFolderDisplay" style="margin-top: 10px; padding: 10px; background: #f0f0f0; border-radius: 6px; font-size: 0.9em; word-break: break-all; display: none;">
+                    <strong>Cartella attuale:</strong><br>
+                    <span id="backupFolderPath"></span>
+                </div>
+            </div>
+
             <hr style="margin: 20px 0; border: none; border-top: 1px solid #ddd;">
             
             <h3 style="margin: 20px 0 10px 0; font-size: 1.1em;">☁️ Sincronizzazione Cloud</h3>
@@ -3465,13 +3486,29 @@
             document.getElementById('backupReminder').checked = settings.backupReminder;
             document.getElementById('backupReminderThreshold').value = settings.backupReminderThreshold;
             
+            // Load auto-save backup settings
+            const autoSaveEnabled = localStorage.getItem('autoSaveBackupEnabled') === 'true';
+            const autoSaveCheckbox = document.getElementById('autoSaveBackup');
+            if (autoSaveCheckbox) {
+                autoSaveCheckbox.checked = autoSaveEnabled;
+                const folderGroup = document.getElementById('backupFolderGroup');
+                folderGroup.style.display = autoSaveEnabled ? 'block' : 'none';
+                
+                if (autoSaveEnabled) {
+                    const folderName = localStorage.getItem('backupFolderName');
+                    if (folderName) {
+                        document.getElementById('backupFolderDisplay').style.display = 'block';
+                        document.getElementById('backupFolderPath').textContent = folderName;
+                    }
+                }
+            }
+            
             // Load Google Drive sync settings (SAFE)
             try {
                 const syncEnabled = localStorage.getItem('googleDriveSyncEnabled') === 'true';
                 const enableCheckbox = document.getElementById('enableGoogleDriveSync');
                 if (enableCheckbox) {
                     enableCheckbox.checked = syncEnabled;
-                    toggleGoogleDriveSync();
                 }
             } catch (error) {
                 console.error('[Settings] Google Drive load error:', error);
@@ -3755,7 +3792,7 @@
             document.getElementById('exportModal').classList.remove('active');
         }
 
-        function exportData() {
+        async function exportData() {
             const passwordData = localStorage.getItem('passwordManager_data');
             const memoryData = localStorage.getItem('passwordManager_memoryData');
             const salt = localStorage.getItem('passwordManager_salt');
@@ -3778,11 +3815,46 @@
                 exportObj.passwordHint = securityQuestion;
             }
             
-            const blob = new Blob([JSON.stringify(exportObj, null, 2)], { type: 'application/json' });
+            const fileName = `password-backup-${new Date().toISOString().split('T')[0]}.json`;
+            const jsonContent = JSON.stringify(exportObj, null, 2);
+            
+            // Check if auto-save to folder is enabled
+            const autoSaveEnabled = localStorage.getItem('autoSaveBackupEnabled') === 'true';
+            
+            if (autoSaveEnabled && backupFolderHandle) {
+                try {
+                    // Request permission if needed
+                    const permission = await backupFolderHandle.requestPermission({ mode: 'readwrite' });
+                    
+                    if (permission === 'granted') {
+                        // Create file in selected folder
+                        const fileHandle = await backupFolderHandle.getFileHandle(fileName, { create: true });
+                        const writable = await fileHandle.createWritable();
+                        await writable.write(jsonContent);
+                        await writable.close();
+                        
+                        closeExportModal();
+                        
+                        // Reset changes counter and update last backup time
+                        localStorage.setItem('passwordManager_changesSinceBackup', '0');
+                        localStorage.setItem('passwordManager_lastBackup', new Date().toISOString());
+                        
+                        showToast('✅ Backup salvato in: ' + backupFolderHandle.name, 'success');
+                        return;
+                    }
+                } catch (error) {
+                    console.error('Error saving to folder:', error);
+                    showToast('⚠️ Impossibile salvare nella cartella, uso download normale', 'warning');
+                    // Fall through to normal download
+                }
+            }
+            
+            // Normal download (fallback or if auto-save disabled)
+            const blob = new Blob([jsonContent], { type: 'application/json' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `password-backup-${new Date().toISOString().split('T')[0]}.json`;
+            a.download = fileName;
             a.click();
             URL.revokeObjectURL(url);
             
@@ -4121,6 +4193,58 @@
                 saveSettings();
             } catch (error) {
                 console.error('[Sync] Toggle error:', error);
+            }
+        }
+
+        // Auto-save backup folder
+        let backupFolderHandle = null;
+
+        function toggleAutoSaveBackup() {
+            const checkbox = document.getElementById('autoSaveBackup');
+            const folderGroup = document.getElementById('backupFolderGroup');
+            
+            if (checkbox.checked) {
+                // Check if File System Access API is supported
+                if (!('showDirectoryPicker' in window)) {
+                    showToast('⚠️ Funzione non supportata su questo browser. Usa Chrome o Edge.', 'error');
+                    checkbox.checked = false;
+                    return;
+                }
+                folderGroup.style.display = 'block';
+            } else {
+                folderGroup.style.display = 'none';
+                backupFolderHandle = null;
+                localStorage.removeItem('autoSaveBackupEnabled');
+            }
+            
+            saveSettings();
+        }
+
+        async function selectBackupFolder() {
+            try {
+                // Request permission to select directory
+                const dirHandle = await window.showDirectoryPicker({
+                    mode: 'readwrite',
+                    startIn: 'downloads'
+                });
+                
+                backupFolderHandle = dirHandle;
+                
+                // Show selected folder
+                document.getElementById('backupFolderDisplay').style.display = 'block';
+                document.getElementById('backupFolderPath').textContent = dirHandle.name;
+                
+                localStorage.setItem('autoSaveBackupEnabled', 'true');
+                localStorage.setItem('backupFolderName', dirHandle.name);
+                
+                showToast('✅ Cartella selezionata! I prossimi backup saranno salvati qui.', 'success');
+            } catch (error) {
+                if (error.name === 'AbortError') {
+                    showToast('Selezione cartella annullata', 'info');
+                } else {
+                    console.error('Error selecting folder:', error);
+                    showToast('❌ Errore nella selezione della cartella', 'error');
+                }
             }
         }
 
