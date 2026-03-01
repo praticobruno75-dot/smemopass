@@ -2251,10 +2251,11 @@
                 loadMemory();
                 loadDashboard();
                 resetInactivityTimer();
-                showToast('Accesso effettuato', 'success');
                 
                 // Initialize backup folder handle from IndexedDB
-                initBackupFolder();
+                await initBackupFolder();
+                
+                showToast('Accesso effettuato', 'success');
             } catch (e) {
                 showToast('Errore durante l\'accesso', 'error');
             }
@@ -4238,17 +4239,24 @@
 
         async function saveFolderHandle(handle) {
             try {
+                console.log('[Backup] Saving folder handle to IndexedDB...');
                 const db = await openDB();
                 const transaction = db.transaction(STORE_NAME, 'readwrite');
                 const store = transaction.objectStore(STORE_NAME);
                 store.put(handle, 'backupFolder');
                 
                 return new Promise((resolve, reject) => {
-                    transaction.oncomplete = () => resolve();
-                    transaction.onerror = () => reject(transaction.error);
+                    transaction.oncomplete = () => {
+                        console.log('[Backup] Folder handle saved successfully');
+                        resolve();
+                    };
+                    transaction.onerror = () => {
+                        console.error('[Backup] Error saving folder handle:', transaction.error);
+                        reject(transaction.error);
+                    };
                 });
             } catch (error) {
-                console.error('Error saving folder handle:', error);
+                console.error('[Backup] Exception saving folder handle:', error);
             }
         }
 
@@ -4287,11 +4295,20 @@
 
         // Load folder handle on app start
         async function initBackupFolder() {
+            console.log('[Backup] Initializing backup folder...');
             const autoSaveEnabled = localStorage.getItem('autoSaveBackupEnabled') === 'true';
+            console.log('[Backup] Auto-save enabled:', autoSaveEnabled);
+            
             if (autoSaveEnabled) {
-                backupFolderHandle = await loadFolderHandle();
-                if (backupFolderHandle) {
-                    console.log('Backup folder handle loaded from IndexedDB');
+                try {
+                    backupFolderHandle = await loadFolderHandle();
+                    if (backupFolderHandle) {
+                        console.log('[Backup] Folder handle loaded from IndexedDB:', backupFolderHandle.name);
+                    } else {
+                        console.log('[Backup] No folder handle found in IndexedDB');
+                    }
+                } catch (error) {
+                    console.error('[Backup] Error loading folder handle:', error);
                 }
             }
         }
