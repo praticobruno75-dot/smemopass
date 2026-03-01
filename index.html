@@ -2252,6 +2252,9 @@
                 loadDashboard();
                 resetInactivityTimer();
                 showToast('Accesso effettuato', 'success');
+                
+                // Initialize backup folder handle from IndexedDB
+                initBackupFolder();
             } catch (e) {
                 showToast('Errore durante l\'accesso', 'error');
             }
@@ -3823,28 +3826,41 @@
             
             if (autoSaveEnabled && backupFolderHandle) {
                 try {
-                    // Request permission if needed
-                    const permission = await backupFolderHandle.requestPermission({ mode: 'readwrite' });
+                    // Verify handle is still valid
+                    const permission = await backupFolderHandle.queryPermission({ mode: 'readwrite' });
                     
-                    if (permission === 'granted') {
-                        // Create file in selected folder
-                        const fileHandle = await backupFolderHandle.getFileHandle(fileName, { create: true });
-                        const writable = await fileHandle.createWritable();
-                        await writable.write(jsonContent);
-                        await writable.close();
-                        
-                        closeExportModal();
-                        
-                        // Reset changes counter and update last backup time
-                        localStorage.setItem('passwordManager_changesSinceBackup', '0');
-                        localStorage.setItem('passwordManager_lastBackup', new Date().toISOString());
-                        
-                        showToast('✅ Backup salvato in: ' + backupFolderHandle.name, 'success');
-                        return;
+                    if (permission === 'prompt') {
+                        // Request permission
+                        const granted = await backupFolderHandle.requestPermission({ mode: 'readwrite' });
+                        if (granted !== 'granted') {
+                            throw new Error('Permission denied');
+                        }
+                    } else if (permission === 'denied') {
+                        throw new Error('Permission denied');
                     }
+                    
+                    // Create file in selected folder
+                    const fileHandle = await backupFolderHandle.getFileHandle(fileName, { create: true });
+                    const writable = await fileHandle.createWritable();
+                    await writable.write(jsonContent);
+                    await writable.close();
+                    
+                    closeExportModal();
+                    
+                    // Reset changes counter and update last backup time
+                    localStorage.setItem('passwordManager_changesSinceBackup', '0');
+                    localStorage.setItem('passwordManager_lastBackup', new Date().toISOString());
+                    
+                    showToast('✅ Backup salvato in: ' + backupFolderHandle.name + '/' + fileName, 'success');
+                    return;
                 } catch (error) {
                     console.error('Error saving to folder:', error);
-                    showToast('⚠️ Impossibile salvare nella cartella, uso download normale', 'warning');
+                    
+                    if (error.name === 'NotAllowedError' || error.message === 'Permission denied') {
+                        showToast('⚠️ Permesso negato. Usa download normale o scegli di nuovo la cartella.', 'warning');
+                    } else {
+                        showToast('⚠️ Errore salvataggio in cartella, uso download normale', 'warning');
+                    }
                     // Fall through to normal download
                 }
             }
@@ -4199,6 +4215,87 @@
         // Auto-save backup folder
         let backupFolderHandle = null;
 
+        // IndexedDB for persistent folder handle storage
+        const DB_NAME = 'smemopass_storage';
+        const DB_VERSION = 1;
+        const STORE_NAME = 'folder_handles';
+
+        function openDB() {
+            return new Promise((resolve, reject) => {
+                const request = indexedDB.open(DB_NAME, DB_VERSION);
+                
+                request.onerror = () => reject(request.error);
+                request.onsuccess = () => resolve(request.result);
+                
+                request.onupgradeneeded = (event) => {
+                    const db = event.target.result;
+                    if (!db.objectStoreNames.contains(STORE_NAME)) {
+                        db.createObjectStore(STORE_NAME);
+                    }
+                };
+            });
+        }
+
+        async function saveFolderHandle(handle) {
+            try {
+                const db = await openDB();
+                const transaction = db.transaction(STORE_NAME, 'readwrite');
+                const store = transaction.objectStore(STORE_NAME);
+                store.put(handle, 'backupFolder');
+                
+                return new Promise((resolve, reject) => {
+                    transaction.oncomplete = () => resolve();
+                    transaction.onerror = () => reject(transaction.error);
+                });
+            } catch (error) {
+                console.error('Error saving folder handle:', error);
+            }
+        }
+
+        async function loadFolderHandle() {
+            try {
+                const db = await openDB();
+                const transaction = db.transaction(STORE_NAME, 'readonly');
+                const store = transaction.objectStore(STORE_NAME);
+                const request = store.get('backupFolder');
+                
+                return new Promise((resolve, reject) => {
+                    request.onsuccess = () => resolve(request.result);
+                    request.onerror = () => reject(request.error);
+                });
+            } catch (error) {
+                console.error('Error loading folder handle:', error);
+                return null;
+            }
+        }
+
+        async function deleteFolderHandle() {
+            try {
+                const db = await openDB();
+                const transaction = db.transaction(STORE_NAME, 'readwrite');
+                const store = transaction.objectStore(STORE_NAME);
+                store.delete('backupFolder');
+                
+                return new Promise((resolve, reject) => {
+                    transaction.oncomplete = () => resolve();
+                    transaction.onerror = () => reject(transaction.error);
+                });
+            } catch (error) {
+                console.error('Error deleting folder handle:', error);
+            }
+        }
+
+        // Load folder handle on app start
+        async function initBackupFolder() {
+            const autoSaveEnabled = localStorage.getItem('autoSaveBackupEnabled') === 'true';
+            if (autoSaveEnabled) {
+                backupFolderHandle = await loadFolderHandle();
+                if (backupFolderHandle) {
+                    console.log('Backup folder handle loaded from IndexedDB');
+                }
+            }
+        }
+
         function toggleAutoSaveBackup() {
             const checkbox = document.getElementById('autoSaveBackup');
             const folderGroup = document.getElementById('backupFolderGroup');
@@ -4215,6 +4312,8 @@
                 folderGroup.style.display = 'none';
                 backupFolderHandle = null;
                 localStorage.removeItem('autoSaveBackupEnabled');
+                localStorage.removeItem('backupFolderName');
+                deleteFolderHandle(); // Remove from IndexedDB
             }
             
             saveSettings();
@@ -4230,6 +4329,9 @@
                 
                 backupFolderHandle = dirHandle;
                 
+                // Save to IndexedDB for persistence
+                await saveFolderHandle(dirHandle);
+                
                 // Show selected folder
                 document.getElementById('backupFolderDisplay').style.display = 'block';
                 document.getElementById('backupFolderPath').textContent = dirHandle.name;
@@ -4237,7 +4339,7 @@
                 localStorage.setItem('autoSaveBackupEnabled', 'true');
                 localStorage.setItem('backupFolderName', dirHandle.name);
                 
-                showToast('✅ Cartella selezionata! I prossimi backup saranno salvati qui.', 'success');
+                showToast('✅ Cartella selezionata e salvata! I prossimi backup saranno salvati qui.', 'success');
             } catch (error) {
                 if (error.name === 'AbortError') {
                     showToast('Selezione cartella annullata', 'info');
