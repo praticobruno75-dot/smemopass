@@ -3004,6 +3004,9 @@
             if (currentTab === 'dashboard') loadDashboard();
             incrementChanges();
             showToast(currentEditId ? 'Password aggiornata' : 'Password aggiunta', 'success');
+            
+            // Trigger Firebase sync
+            triggerFirebaseSync();
         }
 
         // Delete entry
@@ -3018,6 +3021,9 @@
             if (currentTab === 'dashboard') loadDashboard();
             incrementChanges();
             showToast('Password eliminata', 'success');
+            
+            // Trigger Firebase sync
+            triggerFirebaseSync();
         }
 
         // Memory Management Functions
@@ -3403,6 +3409,9 @@
             if (currentTab === 'dashboard') loadDashboard();
             incrementChanges();
             showToast(currentMemoryEditId ? 'Informazione aggiornata' : 'Informazione aggiunta', 'success');
+            
+            // Trigger Firebase sync
+            triggerFirebaseSync();
         }
 
         function deleteMemoryEntry(id) {
@@ -3416,6 +3425,9 @@
             if (currentTab === 'dashboard') loadDashboard();
             incrementChanges();
             showToast('Informazione eliminata', 'success');
+            
+            // Trigger Firebase sync
+            triggerFirebaseSync();
         }
 
         function closeMemoryModal() {
@@ -4403,11 +4415,28 @@
             }
         }
         
+        // Centralized Firebase sync trigger
+        let firebaseSyncTimeout = null;
+        
+        function triggerFirebaseSync() {
+            if (!auth.currentUser || localStorage.getItem('enableAutoSync') !== 'true') {
+                return;
+            }
+            
+            clearTimeout(firebaseSyncTimeout);
+            firebaseSyncTimeout = setTimeout(() => {
+                console.log('[Firebase] Local change detected, uploading...');
+                firebaseUploadData(auth.currentUser.uid);
+            }, 2000); // Upload 2 seconds after last change
+        }
+        
         function setupRealtimeSync(userId) {
             // Unsubscribe from previous listener
             if (unsubscribeFirestore) {
                 unsubscribeFirestore();
             }
+            
+            console.log('[Firebase] Setting up realtime sync for user:', userId);
             
             // Listen for changes in realtime
             unsubscribeFirestore = db.collection('users').doc(userId)
@@ -4419,7 +4448,7 @@
                         
                         // If server data is newer, download it
                         if (serverUpdate && serverUpdate > localUpdate) {
-                            console.log('[Firebase] Newer data detected, downloading...');
+                            console.log('[Firebase] Newer data detected on server, downloading...');
                             firebaseDownloadData(userId);
                             localStorage.setItem('passwordManager_lastUpdate', serverUpdate.toISOString());
                         }
@@ -4428,34 +4457,7 @@
                     console.error('[Firebase] Snapshot error:', error);
                 });
             
-            // Upload on local changes
-            let uploadTimeout;
-            const originalSavePassword = savePassword;
-            const originalSaveMemory = saveMemory;
-            
-            window.savePassword = function() {
-                originalSavePassword.apply(this, arguments);
-                
-                clearTimeout(uploadTimeout);
-                uploadTimeout = setTimeout(() => {
-                    if (auth.currentUser) {
-                        console.log('[Firebase] Local change detected, uploading...');
-                        firebaseUploadData(auth.currentUser.uid);
-                    }
-                }, 2000); // Upload 2 seconds after last change
-            };
-            
-            window.saveMemory = function() {
-                originalSaveMemory.apply(this, arguments);
-                
-                clearTimeout(uploadTimeout);
-                uploadTimeout = setTimeout(() => {
-                    if (auth.currentUser) {
-                        console.log('[Firebase] Local change detected, uploading...');
-                        firebaseUploadData(auth.currentUser.uid);
-                    }
-                }, 2000);
-            };
+            console.log('[Firebase] Realtime listener active');
         }
         
         function toggleAutoSync() {
