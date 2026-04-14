@@ -29,6 +29,15 @@
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    
+    <!-- Eruda Console for Mobile Debugging -->
+    <script src="https://cdn.jsdelivr.net/npm/eruda"></script>
+    <script>
+        // Initialize Eruda only on mobile devices
+        if (/Android|iPhone|iPad|iPod/i.test(navigator.userAgent)) {
+            eruda.init();
+        }
+    </script>
     <style>
         * {
             margin: 0;
@@ -4290,17 +4299,69 @@
             try {
                 const provider = new firebase.auth.GoogleAuthProvider();
                 await auth.signInWithPopup(provider);
-                showToast('✅ Accesso effettuato! Sincronizzazione attiva.', 'success');
                 
-                // Upload current data immediately
                 const user = auth.currentUser;
-                if (user) {
+                if (!user) return;
+                
+                // Check if there's data on Firebase
+                const doc = await db.collection('users').doc(user.uid).get();
+                const hasFirebaseData = doc.exists && doc.data().passwordData && doc.data().passwordData.length > 0;
+                
+                // Check if there's local data
+                const localPasswordData = JSON.parse(localStorage.getItem('passwordManager_data') || '[]');
+                const localMemoryData = JSON.parse(localStorage.getItem('passwordManager_memoryData') || '[]');
+                const hasLocalData = localPasswordData.length > 0 || localMemoryData.length > 0;
+                
+                console.log('[Firebase] Sign-in - Firebase has data:', hasFirebaseData, 'Local has data:', hasLocalData);
+                
+                if (hasFirebaseData && hasLocalData) {
+                    // CASE 1: Both have data - Ask user which to keep
+                    const firebaseCount = doc.data().passwordData.length + (doc.data().memoryData?.length || 0);
+                    const localCount = localPasswordData.length + localMemoryData.length;
+                    
+                    const choice = confirm(
+                        `🔄 CONFLITTO DATI RILEVATO\n\n` +
+                        `Firebase: ${firebaseCount} elementi\n` +
+                        `Locale: ${localCount} elementi\n\n` +
+                        `Quale vuoi tenere?\n\n` +
+                        `OK = Scarica da Firebase (sostituisce locale)\n` +
+                        `Annulla = Tieni locale (sovrascrive Firebase)`
+                    );
+                    
+                    if (choice) {
+                        // Download from Firebase
+                        await firebaseDownloadData(user.uid);
+                        showToast('✅ Dati scaricati da Firebase', 'success');
+                    } else {
+                        // Upload local to Firebase
+                        await firebaseUploadData(user.uid);
+                        showToast('✅ Dati locali caricati su Firebase', 'success');
+                    }
+                    
+                } else if (hasFirebaseData && !hasLocalData) {
+                    // CASE 2: Only Firebase has data - Download automatically
+                    console.log('[Firebase] Downloading data from Firebase (local is empty)');
+                    await firebaseDownloadData(user.uid);
+                    showToast('✅ Dati scaricati da Firebase', 'success');
+                    
+                } else if (!hasFirebaseData && hasLocalData) {
+                    // CASE 3: Only local has data - Upload automatically
+                    console.log('[Firebase] Uploading local data to Firebase (Firebase is empty)');
                     await firebaseUploadData(user.uid);
+                    showToast('✅ Dati locali caricati su Firebase', 'success');
+                    
+                } else {
+                    // CASE 4: Both empty - Just connected
+                    console.log('[Firebase] Both empty - just connected');
+                    showToast('✅ Connesso a Firebase', 'success');
                 }
+                
             } catch (error) {
                 console.error('Firebase sign-in error:', error);
                 if (error.code === 'auth/popup-blocked') {
                     showToast('⚠️ Popup bloccato! Abilita i popup per questo sito.', 'error');
+                } else if (error.code === 'auth/cancelled-popup-request' || error.code === 'auth/popup-closed-by-user') {
+                    showToast('Accesso annullato', 'info');
                 } else {
                     showToast('❌ Errore durante l\'accesso: ' + error.message, 'error');
                 }
@@ -4423,6 +4484,10 @@
                 return;
             }
             
+            // Update local timestamp IMMEDIATELY to prevent listener from overwriting
+            const now = new Date();
+            localStorage.setItem('passwordManager_lastUpdate', now.toISOString());
+            
             clearTimeout(firebaseSyncTimeout);
             firebaseSyncTimeout = setTimeout(() => {
                 console.log('[Firebase] Local change detected, uploading...');
@@ -4438,9 +4503,25 @@
             
             console.log('[Firebase] Setting up realtime sync for user:', userId);
             
+            let isFirstSnapshot = true;
+            
             // Listen for changes in realtime
             unsubscribeFirestore = db.collection('users').doc(userId)
                 .onSnapshot((doc) => {
+                    if (isFirstSnapshot) {
+                        // Skip first snapshot (it's the current state, not a change)
+                        isFirstSnapshot = false;
+                        if (doc.exists) {
+                            const data = doc.data();
+                            const serverUpdate = data.lastUpdate?.toDate();
+                            if (serverUpdate) {
+                                localStorage.setItem('passwordManager_lastUpdate', serverUpdate.toISOString());
+                            }
+                        }
+                        console.log('[Firebase] Initial snapshot received, listening for changes...');
+                        return;
+                    }
+                    
                     if (doc.exists) {
                         const data = doc.data();
                         const serverUpdate = data.lastUpdate?.toDate();
