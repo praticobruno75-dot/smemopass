@@ -24,6 +24,11 @@
     
     <!-- Apple Touch Icon -->
     <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png">
+    
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
     <style>
         * {
             margin: 0;
@@ -1477,15 +1482,49 @@
             <h3 style="margin: 20px 0 10px 0; font-size: 1.1em;">☁️ Sincronizzazione Cloud</h3>
             
             <div class="input-group">
-                <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
-                    <input type="checkbox" id="enableGoogleDriveSync" onchange="toggleGoogleDriveSync()" style="width: auto;">
-                    <span>Abilita sincronizzazione Google Drive</span>
-                </label>
-                <small style="color: #666; margin-top: 5px; display: block;">
-                    🔌 Richiede installazione <strong>Estensione Chrome "SMEMOPASS Sync"</strong><br>
-                    ✅ Sync automatico in background - Zero click necessari!<br>
-                    📥 Scarica l'estensione dal pacchetto fornito
-                </small>
+                <div id="firebaseAuthStatus" style="padding: 15px; border-radius: 8px; background: #f5f5f5; margin-bottom: 15px;">
+                    <div id="firebaseNotConnected" style="display: block;">
+                        <p style="margin-bottom: 10px; color: #666;">
+                            🔒 <strong>Accedi con Google</strong> per sincronizzare i tuoi dati su tutti i dispositivi
+                        </p>
+                        <button class="btn btn-primary" onclick="firebaseSignIn()" style="width: 100%;">
+                            🔐 Accedi con Google
+                        </button>
+                        <small style="color: #666; margin-top: 10px; display: block;">
+                            ✅ Funziona su tutti i browser (Chrome, Firefox, Safari)<br>
+                            ✅ Android e iOS nativi<br>
+                            ✅ Sync automatico in tempo reale<br>
+                            ✅ Completamente gratuito
+                        </small>
+                    </div>
+                    <div id="firebaseConnected" style="display: none;">
+                        <p style="margin-bottom: 10px;">
+                            ✅ <strong>Connesso come:</strong><br>
+                            <span id="firebaseUserEmail" style="color: #667eea;"></span>
+                        </p>
+                        <div style="display: flex; gap: 10px; margin-top: 10px;">
+                            <button class="btn btn-secondary" onclick="firebaseManualSync()" style="flex: 1;">
+                                🔄 Sincronizza ora
+                            </button>
+                            <button class="btn btn-danger" onclick="firebaseSignOut()" style="flex: 1;">
+                                🚪 Disconnetti
+                            </button>
+                        </div>
+                        <small id="firebaseLastSync" style="color: #666; margin-top: 10px; display: block;">
+                            Ultimo sync: Mai
+                        </small>
+                    </div>
+                </div>
+                
+                <div class="input-group">
+                    <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
+                        <input type="checkbox" id="enableAutoSync" onchange="toggleAutoSync()" style="width: auto;">
+                        <span>Sincronizzazione automatica</span>
+                    </label>
+                    <small style="color: #666; margin-top: 5px; display: block;">
+                        Quando abilitata, i tuoi dati vengono sincronizzati automaticamente in tempo reale su Firebase
+                    </small>
+                </div>
             </div>
 
             <div style="margin-top: 30px; padding-top: 20px; border-top: 2px solid #e0e0e0;">
@@ -3507,16 +3546,15 @@
                 }
             }
             
-            // Load Google Drive sync settings (SAFE)
-            try {
-                const syncEnabled = localStorage.getItem('googleDriveSyncEnabled') === 'true';
-                const enableCheckbox = document.getElementById('enableGoogleDriveSync');
-                if (enableCheckbox) {
-                    enableCheckbox.checked = syncEnabled;
-                }
-            } catch (error) {
-                console.error('[Settings] Google Drive load error:', error);
+            // Load Firebase auto-sync settings
+            const autoSyncEnabled = localStorage.getItem('enableAutoSync') === 'true';
+            const autoSyncCheckbox = document.getElementById('enableAutoSync');
+            if (autoSyncCheckbox) {
+                autoSyncCheckbox.checked = autoSyncEnabled;
             }
+            
+            // Update Firebase UI
+            updateFirebaseUI(auth.currentUser);
             
             // Show/hide threshold setting based on reminder checkbox
             toggleBackupThreshold();
@@ -4193,24 +4231,257 @@
         // ====================================
 
         // Toggle Google Drive Sync (SAFE)
-        function toggleGoogleDriveSync() {
+        // ================================
+        // FIREBASE SYNC FUNCTIONS
+        // ================================
+        
+        // Initialize Firebase
+        const firebaseConfig = {
+            apiKey: "AIzaSyA6RprN-TksRg9ZlTarPArZfJz8F6NY4LY",
+            authDomain: "smemopass-be917.firebaseapp.com",
+            projectId: "smemopass-be917",
+            storageBucket: "smemopass-be917.firebasestorage.app",
+            messagingSenderId: "374958140051",
+            appId: "1:374958140051:web:11c088bc0990f1b7e6bb66"
+        };
+        
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const db = firebase.firestore();
+        
+        let unsubscribeFirestore = null;
+        
+        // Check auth state on load
+        auth.onAuthStateChanged((user) => {
+            updateFirebaseUI(user);
+            if (user && localStorage.getItem('enableAutoSync') === 'true') {
+                setupRealtimeSync(user.uid);
+            }
+        });
+        
+        function updateFirebaseUI(user) {
+            const notConnected = document.getElementById('firebaseNotConnected');
+            const connected = document.getElementById('firebaseConnected');
+            const emailSpan = document.getElementById('firebaseUserEmail');
+            
+            if (user) {
+                notConnected.style.display = 'none';
+                connected.style.display = 'block';
+                emailSpan.textContent = user.email;
+            } else {
+                notConnected.style.display = 'block';
+                connected.style.display = 'none';
+            }
+        }
+        
+        async function firebaseSignIn() {
             try {
-                const checkbox = document.getElementById('enableGoogleDriveSync');
-                if (!checkbox) return;
+                const provider = new firebase.auth.GoogleAuthProvider();
+                await auth.signInWithPopup(provider);
+                showToast('✅ Accesso effettuato! Sincronizzazione attiva.', 'success');
                 
-                const enabled = checkbox.checked;
-                localStorage.setItem('googleDriveSyncEnabled', enabled ? 'true' : 'false');
-                
-                if (enabled) {
-                    showToast('✅ Sync abilitato! Installa l\'estensione Chrome per attivarlo.', 'success');
+                // Upload current data immediately
+                const user = auth.currentUser;
+                if (user) {
+                    await firebaseUploadData(user.uid);
+                }
+            } catch (error) {
+                console.error('Firebase sign-in error:', error);
+                if (error.code === 'auth/popup-blocked') {
+                    showToast('⚠️ Popup bloccato! Abilita i popup per questo sito.', 'error');
                 } else {
-                    showToast('Sync disabilitato', 'info');
+                    showToast('❌ Errore durante l\'accesso: ' + error.message, 'error');
+                }
+            }
+        }
+        
+        async function firebaseSignOut() {
+            try {
+                if (unsubscribeFirestore) {
+                    unsubscribeFirestore();
+                    unsubscribeFirestore = null;
+                }
+                await auth.signOut();
+                showToast('Disconnesso da Firebase', 'info');
+            } catch (error) {
+                console.error('Firebase sign-out error:', error);
+                showToast('❌ Errore durante la disconnessione', 'error');
+            }
+        }
+        
+        async function firebaseUploadData(userId) {
+            try {
+                const passwordData = localStorage.getItem('passwordManager_data');
+                const memoryData = localStorage.getItem('passwordManager_memoryData');
+                const salt = localStorage.getItem('passwordManager_salt');
+                const passwordCategories = localStorage.getItem('passwordManager_categories');
+                const memoryCategories = localStorage.getItem('passwordManager_memoryCategories');
+                const passwordHint = localStorage.getItem('passwordManager_securityQuestion');
+                
+                const backupData = {
+                    version: '2.0',
+                    lastUpdate: firebase.firestore.FieldValue.serverTimestamp(),
+                    salt: salt,
+                    passwordData: JSON.parse(passwordData || '[]'),
+                    memoryData: JSON.parse(memoryData || '[]'),
+                    passwordCategories: JSON.parse(passwordCategories || '[]'),
+                    memoryCategories: JSON.parse(memoryCategories || '[]'),
+                    passwordHint: passwordHint || ''
+                };
+                
+                await db.collection('users').doc(userId).set(backupData);
+                
+                const now = new Date().toLocaleString('it-IT');
+                document.getElementById('firebaseLastSync').textContent = `Ultimo sync: ${now}`;
+                
+                console.log('[Firebase] Data uploaded successfully');
+                return true;
+            } catch (error) {
+                console.error('[Firebase] Upload error:', error);
+                showToast('⚠️ Errore durante il caricamento su Firebase', 'warning');
+                return false;
+            }
+        }
+        
+        async function firebaseDownloadData(userId) {
+            try {
+                const doc = await db.collection('users').doc(userId).get();
+                
+                if (!doc.exists) {
+                    console.log('[Firebase] No data found on Firebase');
+                    return false;
                 }
                 
-                saveSettings();
+                const data = doc.data();
+                
+                // Apply data to localStorage
+                localStorage.setItem('passwordManager_salt', data.salt);
+                localStorage.setItem('passwordManager_data', JSON.stringify(data.passwordData || []));
+                localStorage.setItem('passwordManager_memoryData', JSON.stringify(data.memoryData || []));
+                localStorage.setItem('passwordManager_categories', JSON.stringify(data.passwordCategories || []));
+                localStorage.setItem('passwordManager_memoryCategories', JSON.stringify(data.memoryCategories || []));
+                if (data.passwordHint) {
+                    localStorage.setItem('passwordManager_securityQuestion', data.passwordHint);
+                }
+                
+                // Reload data in UI
+                loadCategories();
+                loadMemoryCategories();
+                loadPasswords();
+                loadMemory();
+                loadDashboard();
+                
+                const now = new Date().toLocaleString('it-IT');
+                document.getElementById('firebaseLastSync').textContent = `Ultimo sync: ${now}`;
+                
+                console.log('[Firebase] Data downloaded successfully');
+                return true;
             } catch (error) {
-                console.error('[Sync] Toggle error:', error);
+                console.error('[Firebase] Download error:', error);
+                showToast('⚠️ Errore durante il download da Firebase', 'warning');
+                return false;
             }
+        }
+        
+        async function firebaseManualSync() {
+            const user = auth.currentUser;
+            if (!user) {
+                showToast('⚠️ Effettua prima l\'accesso con Google', 'warning');
+                return;
+            }
+            
+            try {
+                showToast('🔄 Sincronizzazione in corso...', 'info');
+                
+                // Upload current data
+                await firebaseUploadData(user.uid);
+                
+                showToast('✅ Sincronizzazione completata!', 'success');
+            } catch (error) {
+                console.error('[Firebase] Manual sync error:', error);
+                showToast('❌ Errore durante la sincronizzazione', 'error');
+            }
+        }
+        
+        function setupRealtimeSync(userId) {
+            // Unsubscribe from previous listener
+            if (unsubscribeFirestore) {
+                unsubscribeFirestore();
+            }
+            
+            // Listen for changes in realtime
+            unsubscribeFirestore = db.collection('users').doc(userId)
+                .onSnapshot((doc) => {
+                    if (doc.exists) {
+                        const data = doc.data();
+                        const serverUpdate = data.lastUpdate?.toDate();
+                        const localUpdate = new Date(localStorage.getItem('passwordManager_lastUpdate') || 0);
+                        
+                        // If server data is newer, download it
+                        if (serverUpdate && serverUpdate > localUpdate) {
+                            console.log('[Firebase] Newer data detected, downloading...');
+                            firebaseDownloadData(userId);
+                            localStorage.setItem('passwordManager_lastUpdate', serverUpdate.toISOString());
+                        }
+                    }
+                }, (error) => {
+                    console.error('[Firebase] Snapshot error:', error);
+                });
+            
+            // Upload on local changes
+            let uploadTimeout;
+            const originalSavePassword = savePassword;
+            const originalSaveMemory = saveMemory;
+            
+            window.savePassword = function() {
+                originalSavePassword.apply(this, arguments);
+                
+                clearTimeout(uploadTimeout);
+                uploadTimeout = setTimeout(() => {
+                    if (auth.currentUser) {
+                        console.log('[Firebase] Local change detected, uploading...');
+                        firebaseUploadData(auth.currentUser.uid);
+                    }
+                }, 2000); // Upload 2 seconds after last change
+            };
+            
+            window.saveMemory = function() {
+                originalSaveMemory.apply(this, arguments);
+                
+                clearTimeout(uploadTimeout);
+                uploadTimeout = setTimeout(() => {
+                    if (auth.currentUser) {
+                        console.log('[Firebase] Local change detected, uploading...');
+                        firebaseUploadData(auth.currentUser.uid);
+                    }
+                }, 2000);
+            };
+        }
+        
+        function toggleAutoSync() {
+            const checkbox = document.getElementById('enableAutoSync');
+            const enabled = checkbox.checked;
+            
+            localStorage.setItem('enableAutoSync', enabled ? 'true' : 'false');
+            
+            if (enabled) {
+                const user = auth.currentUser;
+                if (user) {
+                    setupRealtimeSync(user.uid);
+                    showToast('✅ Sync automatico abilitato', 'success');
+                } else {
+                    showToast('⚠️ Effettua prima l\'accesso con Google', 'warning');
+                    checkbox.checked = false;
+                }
+            } else {
+                if (unsubscribeFirestore) {
+                    unsubscribeFirestore();
+                    unsubscribeFirestore = null;
+                }
+                showToast('Sync automatico disabilitato', 'info');
+            }
+            
+            saveSettings();
         }
 
         // Auto-save backup folder
